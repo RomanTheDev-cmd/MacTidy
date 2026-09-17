@@ -1,0 +1,3 @@
+"NSDownloadsFolderUsageDescription" = "MacTidy benötigt Ordnerzugriff, um Dateien zu analysieren und ausgewählte oder zur automatischen Bereinigung vorgesehene Objekte in den Papierkorb zu verschieben.";
+"NSDesktopFolderUsageDescription" = "MacTidy benötigt Ordnerzugriff, um Dateien zu analysieren und ausgewählte oder zur automatischen Bereinigung vorgesehene Objekte in den Papierkorb zu verschieben.";
+"NSDocumentsFolderUsageDescription" = "MacTidy benötigt Ordnerzugriff, um Dateien zu analysieren und ausgewählte oder zur automatischen Bereinigung vorgesehene Objekte in den Papierkorb zu verschieben.";

@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleExecutable</key>
+	<string>MacTidyHelper</string>
+	<key>CFBundleIdentifier</key>
+	<string>local.mactidy.helper</string>
+	<key>CFBundleName</key>
+	<string>MacTidy Helper</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleVersion</key>
+	<string>1</string>
+	<key>LSMinimumSystemVersion</key>
+	<string>13.0</string>
+	<key>LSUIElement</key>
+	<true/>
+	<key>NSDownloadsFolderUsageDescription</key>
+	<string>Еженедельный перенос содержимого Загрузок в Корзину по включённому вами расписанию.</string>
+</dict>
+</plist>

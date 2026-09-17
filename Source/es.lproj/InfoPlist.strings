@@ -1,0 +1,3 @@
+"NSDownloadsFolderUsageDescription" = "MacTidy necesita acceso a la carpeta para analizar archivos y trasladar a la Papelera los elementos seleccionados o programados para la limpieza.";
+"NSDesktopFolderUsageDescription" = "MacTidy necesita acceso a la carpeta para analizar archivos y trasladar a la Papelera los elementos seleccionados o programados para la limpieza.";
+"NSDocumentsFolderUsageDescription" = "MacTidy necesita acceso a la carpeta para analizar archivos y trasladar a la Papelera los elementos seleccionados o programados para la limpieza.";

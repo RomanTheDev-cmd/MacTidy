@@ -1,0 +1,8 @@
+.DS_Store
+*.app/
+dist/
+*.zip
+*.dmg
+*.pkg
+.swiftpm/
+.build/

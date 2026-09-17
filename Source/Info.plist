@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>en</string>
+	<key>CFBundleExecutable</key>
+	<string>MacTidy</string>
+	<key>CFBundleIconFile</key>
+	<string>MacTidyGraphite</string>
+	<key>CFBundleIdentifier</key>
+	<string>local.mactidy.cleaner</string>
+	<key>CFBundleLocalizations</key>
+	<array>
+		<string>de</string>
+		<string>ru</string>
+		<string>pl</string>
+		<string>en</string>
+		<string>it</string>
+		<string>vi</string>
+		<string>id</string>
+		<string>es</string>
+	</array>
+	<key>CFBundleName</key>
+	<string>MacTidy</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>2.1.0</string>
+	<key>CFBundleVersion</key>
+	<string>7</string>
+	<key>LSMinimumSystemVersion</key>
+	<string>13.0</string>
+	<key>NSDesktopFolderUsageDescription</key>
+	<string>MacTidy needs access to scan the folders you select and move selected files to Trash.</string>
+	<key>NSDocumentsFolderUsageDescription</key>
+	<string>MacTidy needs access to scan the folders you select and move selected files to Trash.</string>
+	<key>NSDownloadsFolderUsageDescription</key>
+	<string>MacTidy needs access to scan the folders you select and move selected files to Trash.</string>
+	<key>NSHighResolutionCapable</key>
+	<true/>
+</dict>
+</plist>
