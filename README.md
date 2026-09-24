@@ -6,11 +6,15 @@ A native macOS app for finding large files, reviewing clutter, and moving select
 
 ## Install
 
-1. Download **MacTidy-2.5.0-arm64.pkg** from [Releases](https://github.com/RomanTheDev-cmd/MacTidy/releases/latest).
+1. Download **MacTidy-2.6.0-arm64.pkg** from [Releases](https://github.com/RomanTheDev-cmd/MacTidy/releases/latest).
 2. Double-click the installer and follow the standard macOS installation steps.
 3. Open **MacTidy** in **Applications**.
 
 The standalone installer places the app in `/Applications`. It does not run a cleanup, enable a schedule, or require developer tools. Quit MacTidy before updating. Existing preferences and an enabled schedule are preserved.
+
+On first launch, MacTidy explains file access in one screen and offers a shortcut to **System Settings → Privacy & Security → Full Disk Access**. macOS requires you to grant access yourself; an installer cannot grant it. You can continue without it, but some folders will be missing from the disk breakdown. Restart MacTidy after changing Full Disk Access. The guide can be reopened from analysis settings.
+
+If weekly Downloads cleanup is enabled, **MacTidy Helper** is a separate app and also needs file access. The guide then offers **Show helper** so you can add it in the same Full Disk Access pane. Without that access, scheduled cleanup may fail and will report the error rather than removing files.
 
 The prebuilt installer requires **Apple Silicon (M1 or newer) and macOS 13+**. The app is ad-hoc signed; the installer is unsigned and the release is not Apple-notarized. macOS may block it. After attempting to open the downloaded installer, use **System Settings → Privacy & Security → Open Anyway** if available and you trust this release. Managed Macs may disallow this. No Developer ID certificate is included.
 
@@ -19,6 +23,7 @@ The prebuilt installer requires **Apple Silicon (M1 or newer) and macOS 13+**. T
 - Reviews application caches, logs older than 30 days, downloaded installers and archives, old downloads, Xcode DerivedData, and large files in a chosen folder.
 - Starts with one Scan button. After the scan, review a clean list, choose files, then confirm Move to Trash. Search, sorting, exclusions and Finder reveal remain available.
 - Deduplicates overlapping results and rechecks files before moving them.
+- The storage window has **Explore remaining space**: it measures the largest folders across the Data volume, lets you browse deeper and reveal items in Finder, and reports the number of local Time Machine snapshots. This explains space outside the personal-file scan without offering one-click removal of protected library or system folders. Figures are approximate because APFS snapshots, shared blocks and access restrictions affect totals.
 - The Applications window follows the same flow: scan first, then review apps unused for 30, 90, or 180 days using Spotlight history. Missing history is separate; running applications and MacTidy itself are protected. Apps without sufficient file permissions are marked unavailable and skipped by Select All. Only the app bundle is moved; documents and settings remain.
 - The Storage by Type window estimates space used by photos, videos, audio, documents, installers, archives, apps, and other files. Select any personal-file category, including Other Files, to review individual files and move only selected items to Trash. System and protected folders remain excluded. The Applications category suggests up to three apps not opened for 90 days and opens the dedicated app review.
 - **Free up space** accepts a target in GB and presents alternatives: installers and archives, old downloads, large personal files, or a combined selection. It also links to rarely used apps for separate review. Review each suggested file, change the selection, and confirm before anything moves to Trash. Estimates may fall short of the target.

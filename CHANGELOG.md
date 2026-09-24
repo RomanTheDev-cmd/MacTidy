@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.6.0
+
+- Add a navigable disk breakdown that measures large folders, reports local Time Machine snapshot count and marks folders that macOS does not allow MacTidy to read. The unexplained remainder is explicitly approximate and cannot be attributed to one folder.
+- Add a single first-run file-access guide with a shortcut to Full Disk Access settings; the same guide is available from analysis settings. macOS still requires the user to grant this access.
+- Replace the ambiguous Done button in analysis settings with a clear close icon and Escape shortcut.
+
 ## 2.5.0
 
 - Let users review and move other personal files to Trash while keeping system and protected locations excluded.

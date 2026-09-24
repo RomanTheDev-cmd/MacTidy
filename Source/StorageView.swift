@@ -93,6 +93,7 @@ import AppKit
 
 @MainActor final class StorageUIState: ObservableObject {
     @Published var showPlanner = false
+    @Published var showAudit = false
 }
 
 struct StorageView: View {
@@ -128,6 +129,7 @@ struct StorageView: View {
         .onDisappear { m.cancel() }
         .onReceive(NotificationCenter.default.publisher(for: .init("MacTidyLanguageUpdated"))) { _ in m.objectWillChange.send() }
         .sheet(isPresented: $ui.showPlanner) { SpacePlannerView(model: m) }
+        .sheet(isPresented: $ui.showAudit) { DiskAuditView(diskUsed: m.used, unclassified: m.hasScanned ? m.protectedSize : nil) }
         .alert(L("s102"), isPresented: $m.confirm) {
             Button(L("s039"), role: .cancel) {}
             Button(L("s040"), role: .destructive) { m.trash() }
@@ -182,12 +184,15 @@ struct StorageView: View {
                     }.buttonStyle(.plain)
                 }
                 Divider().padding(.vertical, 5)
-                HStack(spacing: 11) {
-                    Image(systemName: "lock.shield").frame(width: 20).foregroundStyle(.secondary)
-                    Text(L("s169")).font(.caption)
-                    Spacer()
-                    Text(m.hasScanned ? bytes(m.protectedSize) : "—").font(.caption).monospacedDigit()
-                }.foregroundStyle(.secondary).padding(11)
+                Button { ui.showAudit = true } label: {
+                    HStack(spacing: 11) {
+                        Image(systemName: "chart.bar.xaxis").frame(width: 20).foregroundStyle(.secondary)
+                        Text(L("s169")).font(.caption).multilineTextAlignment(.leading)
+                        Spacer()
+                        Text(m.hasScanned ? bytes(m.protectedSize) : "—").font(.caption).monospacedDigit()
+                        Image(systemName: "chevron.right").font(.caption2)
+                    }.padding(11).contentShape(Rectangle())
+                }.buttonStyle(.plain).help(L("s198"))
             }.padding(10)
         }.glassPanel(radius: 18)
     }

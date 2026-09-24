@@ -163,6 +163,7 @@ enum ResultSort: String, CaseIterable {
 }
 @MainActor final class CleanupUIState: ObservableObject {
     @Published var showSettings = false
+    @Published var showPermissions = false
 }
 struct ContentView: View {
     @StateObject private var m = Model()
@@ -187,10 +188,20 @@ struct ContentView: View {
         }
         .tint(.primary)
         .sheet(isPresented: $ui.showSettings) { settings }
+        .sheet(isPresented: $ui.showPermissions) { PermissionGuideView() }
         .task { await updater.check(automatic: true) }
+        .onAppear {
+            if !UserDefaults.standard.bool(forKey: "permissionsGuideSeen-v2") { ui.showPermissions = true }
+        }
         .onReceive(NotificationCenter.default.publisher(for: .init("MacTidyLanguageUpdated"))) { _ in m.objectWillChange.send() }
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
             m.weeklyEnabled = WeeklySchedule.enabled; m.weeklyResult = WeeklySchedule.lastResult(); m.refreshDisk()
+        }
+        .onChange(of: m.weeklyEnabled) { enabled in
+            if enabled && !UserDefaults.standard.bool(forKey: "weeklyAccessGuideSeen-v1") {
+                UserDefaults.standard.set(true, forKey: "weeklyAccessGuideSeen-v1")
+                ui.showPermissions = true
+            }
         }
         .alert(L("s099"), isPresented: $m.weeklyConfirm) {
             Button(L("s039"), role: .cancel) {}
@@ -425,7 +436,15 @@ struct ContentView: View {
                 HStack {
                     Text(L("s129")).font(.title2.weight(.semibold))
                     Spacer()
-                    Button(L("s043")) { ui.showSettings = false }.keyboardShortcut(.escape)
+                    Button {
+                        ui.showSettings = false
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) { ui.showPermissions = true }
+                    } label: {
+                        Image(systemName: "lock.shield").frame(width: 22, height: 22)
+                    }.buttonStyle(.plain).help(L("s218")).accessibilityLabel(L("s218"))
+                    Button { ui.showSettings = false } label: {
+                        Image(systemName: "xmark").frame(width: 22, height: 22)
+                    }.buttonStyle(.plain).help(L("s197")).accessibilityLabel(L("s197")).keyboardShortcut(.escape)
                 }
                 VStack(alignment: .leading, spacing: 13) {
                     HStack { Text(L("s114")).font(.headline); Spacer(); Text(L("s115", m.enabled.count)).font(.caption).foregroundStyle(.secondary) }

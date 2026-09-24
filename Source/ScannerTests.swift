@@ -16,7 +16,7 @@ func blockOn(_ gate: DispatchSemaphore) { gate.wait() }
         check(AppLocalization.format("{1} / {0}", ["literal {1}", "second"]) == "second / literal {1}", "translation placeholders cannot expand argument content")
         let catalogs = URL(fileURLWithPath: ProcessInfo.processInfo.environment["MACTIDY_LOCALIZATION_DIR"]!)
         let english = AppLocalization.shared.english
-        check(english.count == 196, "English fallback is complete")
+        check(english.count == 221, "English fallback is complete")
         for url in try FileManager.default.contentsOfDirectory(at: catalogs, includingPropertiesForKeys: nil) where url.pathExtension == "json" {
             let catalog = try JSONDecoder().decode([String: String].self, from: Data(contentsOf: url))
             check(Set(catalog.keys) == Set(english.keys) && english.allSatisfy { AppLocalization.tokens($0.value) == AppLocalization.tokens(catalog[$0.key] ?? "") }, "catalog keys and placeholders: " + url.lastPathComponent)
@@ -40,6 +40,8 @@ func blockOn(_ gate: DispatchSemaphore) { gate.wait() }
         var unsigned = release; unsigned["assets"] = [asset("MacTidy-2.4.0-arm64.pkg", 2_000_000)]
         rejects("unsigned release rejected") { _ = try AvailableUpdate.parse(JSONSerialization.data(withJSONObject: unsigned), current: AppVersion("2.3.0")!) }
         let fm = FileManager.default
+        let parsedDisk = DiskAudit.parse("100\t/System/Volumes/Data\n60\t/System/Volumes/Data/Library\n40\t/System/Volumes/Data/Users\n5\t/System/Volumes/Data/Users/name\n", root: DiskAudit.dataRoot)
+        check(parsedDisk.0 == 102_400 && parsedDisk.1.map(\.url.lastPathComponent) == ["Library", "Users"], "disk overview parses only direct children and sorts largest first")
         let rawRoot = fm.temporaryDirectory.appendingPathComponent("MacTidy-tests-" + UUID().uuidString)
         try fm.createDirectory(at: rawRoot, withIntermediateDirectories: true)
         let root = Scanner.canonical(rawRoot)
