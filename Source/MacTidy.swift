@@ -214,6 +214,9 @@ struct ContentView: View {
                 Text(L("s104")).font(.caption).foregroundStyle(.secondary)
             }
             Spacer()
+            Button { openWindow(id: "storage") } label: {
+                Image(systemName: "internaldrive").font(.system(size: 17)).frame(width: 30, height: 30)
+            }.buttonStyle(.plain).help(L("s164")).accessibilityLabel(L("s164"))
             Button { openWindow(id: "applications") } label: {
                 Image(systemName: "square.grid.2x2").font(.system(size: 17)).frame(width: 30, height: 30)
             }.buttonStyle(.plain).help(L("s014")).accessibilityLabel(L("s014"))
@@ -488,6 +491,7 @@ struct ContentView: View {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var delegate
     var body: some Scene {
         Window("MacTidy", id: "main") { LocalizedRoot(translates: true) { ContentView() } }.windowStyle(.hiddenTitleBar).defaultSize(width: 920, height: 690)
+        Window(L("s164"), id: "storage") { LocalizedRoot(translates: false) { StorageView() } }.windowStyle(.hiddenTitleBar).defaultSize(width: 1000, height: 730)
         Window(L("s143"), id: "applications") { LocalizedRoot(translates: false) { ApplicationsView() } }.windowStyle(.hiddenTitleBar).defaultSize(width: 920, height: 690)
     }
 }

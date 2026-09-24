@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.4.0
+
+- Added a Storage by Type window for personal files, installer packages and installed apps, with a compact list of apps unused for 90 days.
+- Added explicit selection and Trash review within each safe file category. System data, unknown file types, app libraries and hidden files remain protected.
+- Replaced the app icon with a flat monochrome brush and sparkle on a transparent background.
+
 ## 2.3.0
 
 - Check GitHub Releases at startup and open the macOS Installer once when a newer signed version is available.

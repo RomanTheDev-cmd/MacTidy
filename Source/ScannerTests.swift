@@ -16,7 +16,7 @@ func blockOn(_ gate: DispatchSemaphore) { gate.wait() }
         check(AppLocalization.format("{1} / {0}", ["literal {1}", "second"]) == "second / literal {1}", "translation placeholders cannot expand argument content")
         let catalogs = URL(fileURLWithPath: ProcessInfo.processInfo.environment["MACTIDY_LOCALIZATION_DIR"]!)
         let english = AppLocalization.shared.english
-        check(english.count == 158, "English fallback is complete")
+        check(english.count == 177, "English fallback is complete")
         for url in try FileManager.default.contentsOfDirectory(at: catalogs, includingPropertiesForKeys: nil) where url.pathExtension == "json" {
             let catalog = try JSONDecoder().decode([String: String].self, from: Data(contentsOf: url))
             check(Set(catalog.keys) == Set(english.keys) && english.allSatisfy { AppLocalization.tokens($0.value) == AppLocalization.tokens(catalog[$0.key] ?? "") }, "catalog keys and placeholders: " + url.lastPathComponent)
@@ -51,6 +51,26 @@ func blockOn(_ gate: DispatchSemaphore) { gate.wait() }
         }
         for name in ["scan/large.bin", "scan/Library/skip.bin", "scan/.hidden/skip.bin", "scan/sample.app/skip.bin", "scan/nested/second.bin"] { try write(name) }
         try write("scan/small.bin", 10)
+        try write("storagehome/Documents/report.pdf")
+        try write("storagehome/Downloads/setup.pkg")
+        try write("storagehome/Downloads/archive.zip")
+        try write("storagehome/Pictures/photo.heic")
+        try write("storagehome/Documents/cache.db")
+        try write("storagehome/Documents/.secret.key")
+        try write("storagehome/Pictures/Family.photoslibrary/internal.jpg")
+        let storageHome = root.appendingPathComponent("storagehome")
+        try fm.createSymbolicLink(at: storageHome.appendingPathComponent("Documents/outside.pdf"), withDestinationURL: root.appendingPathComponent("scan/large.bin"))
+        let overview = try StorageScanner.scan(home: storageHome, appRoots: [], ownBundleID: nil)
+        check(overview.counts[.documents] == 1 && overview.counts[.installers] == 1 && overview.counts[.archives] == 1 && overview.counts[.photos] == 1, "personal file types and packages classified")
+        check(!overview.files.contains { $0.entry.url.path.contains("photoslibrary") || $0.entry.url.lastPathComponent == "outside.pdf" || $0.entry.url.lastPathComponent == ".secret.key" }, "protected packages, links and hidden files skipped")
+        check(overview.files.contains { $0.kind == .other && $0.entry.url.lastPathComponent == "cache.db" } && !StorageKind.other.reviewable, "unknown file types are read-only")
+        let document = overview.files.first { $0.kind == .documents }!
+        var movedStorage: [URL] = []
+        let planned = StorageScanner.trash([document]) { movedStorage.append($0) }
+        check(planned.removed == [document.id] && movedStorage == [document.entry.url], "selected category file validated before cleanup")
+        try write("storagehome/Documents/report.pdf", 16_384)
+        let changed = StorageScanner.trash([document]) { movedStorage.append($0) }
+        check(changed.removed.isEmpty && movedStorage.count == 1, "changed category file rejected before cleanup")
         let scanRoot = root.appendingPathComponent("scan")
         try fm.createSymbolicLink(at: scanRoot.appendingPathComponent("link.bin"), withDestinationURL: scanRoot.appendingPathComponent("large.bin"))
         let r = try Scanner.scan(root: scanRoot, caches: false, threshold: 4096)

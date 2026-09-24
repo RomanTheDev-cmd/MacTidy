@@ -6,7 +6,7 @@ A native macOS app for finding large files, reviewing clutter, and moving select
 
 ## Install
 
-1. Download **MacTidy-2.3.0-arm64.pkg** from [Releases](https://github.com/RomanTheDev-cmd/MacTidy/releases/latest).
+1. Download **MacTidy-2.4.0-arm64.pkg** from [Releases](https://github.com/RomanTheDev-cmd/MacTidy/releases/latest).
 2. Double-click the installer and follow the standard macOS installation steps.
 3. Open **MacTidy** in **Applications**.
 
@@ -20,6 +20,7 @@ The prebuilt installer requires **Apple Silicon (M1 or newer) and macOS 13+**. T
 - Starts with one Scan button. After the scan, review a clean list, choose files, then confirm Move to Trash. Search, sorting, exclusions and Finder reveal remain available.
 - Deduplicates overlapping results and rechecks files before moving them.
 - The Applications window follows the same flow: scan first, then review apps unused for 30, 90, or 180 days using Spotlight history. Missing history is separate; running applications and MacTidy itself are protected. Only the app bundle is moved; documents and settings remain.
+- The Storage by Type window estimates space used by photos, videos, audio, documents, installers, archives, apps, and other files. Select a category to review individual files, including installer packages, or open the dedicated app review. Up to three apps not opened for 90 days are suggested in the app category; none are selected automatically. Unknown files, system data, and protected folders are read-only.
 - Optionally moves **everything in Downloads, including new files, hidden files, and whole folders**, to Trash every Sunday at 12:00 local time. This requires explicit opt-in. Trash is never emptied.
 - Uses native glass on macOS 26+, standard materials on earlier versions, and the system appearance. The monochrome icon has a transparent background.
 
@@ -61,7 +62,7 @@ cd MacTidy
 
 `build.command` produces `MacTidy.app` for the current Mac's architecture. `package.command` builds a standalone `.pkg` in `dist/` and its SHA-256 checksum. Published releases are Apple Silicon; Intel builds have not been verified.
 
-Tests cover scanning, cancellation, symlinks, changed metadata, recursive cache changes, deduplication, exclusions, application-removal guards, scheduling, and localization catalogs. The real Trash test only moves and restores a generated temporary fixture.
+Tests cover scanning, cancellation, symlinks, changed metadata, storage categories, selected-category cleanup, recursive cache changes, deduplication, exclusions, application-removal guards, scheduling, and localization catalogs. The real Trash test only moves and restores a generated temporary fixture.
 
 ## Source layout
 
