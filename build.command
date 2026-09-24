@@ -3,6 +3,7 @@ set -euo pipefail
 cd "$(dirname "$0")"
 mkdir -p MacTidy.app/Contents/MacOS MacTidy.app/Contents/Resources
 cp Source/Info.plist MacTidy.app/Contents/Info.plist
+cp Source/PrivacyInfo.xcprivacy MacTidy.app/Contents/Resources/PrivacyInfo.xcprivacy
 cp -R Localization MacTidy.app/Contents/Resources/
 swiftc -O -swift-version 5 -parse-as-library Source/Localization.swift Source/Core.swift Source/Weekly.swift Source/Audit.swift Source/Applications.swift Source/Storage.swift Source/DiskAudit.swift Source/DiskAuditView.swift Source/CloudLocal.swift Source/CloudLocalView.swift Source/PermissionGuide.swift Source/StorageView.swift Source/Updates.swift Source/TranslationSupport.swift Source/ApplicationsView.swift Source/MacTidy.swift -o MacTidy.app/Contents/MacOS/MacTidy -framework SwiftUI -framework AppKit -framework CoreServices -Xlinker -weak_framework -Xlinker Translation -target "$(uname -m)-apple-macosx13.0"
 mkdir -p MacTidy.app/Contents/Resources
@@ -14,6 +15,7 @@ swiftc -O -swift-version 5 -parse-as-library Source/Localization.swift Source/Co
 mkdir -p "$helper/Contents/Resources"
 cp -R Localization "$helper/Contents/Resources/"
 cp Source/HelperInfo.plist "$helper/Contents/Info.plist"
+cp Source/PrivacyInfo.xcprivacy "$helper/Contents/Resources/PrivacyInfo.xcprivacy"
 for locale in Source/*.lproj; do
     cp -R "$locale" MacTidy.app/Contents/Resources/
     cp -R "$locale" "$helper/Contents/Resources/"

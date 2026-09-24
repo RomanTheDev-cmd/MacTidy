@@ -12,8 +12,7 @@ import AppKit
     @Published var confirm = false
     @Published var error: String?
     @Published var status = ""
-    @Published var free: Int64 = 0
-    @Published var total: Int64 = 0
+    @Published var capacity = DiskCapacity(total: 0, immediateFree: 0, available: 0)
     var worker: Task<StorageSnapshot, Error>?
     var generation = UUID()
     var visible: [StorageFile] {
@@ -27,14 +26,11 @@ import AppKit
             .sorted { $0.entry.size > $1.entry.size }
     }
     var scannedSize: Int64 { snapshot.totals.values.reduce(0, +) }
-    var used: Int64 { max(0, total - free) }
+    var used: Int64 { capacity.used }
     var protectedSize: Int64 { max(0, used - scannedSize) }
     init() { refreshDisk() }
     func refreshDisk() {
-        if let a = try? FileManager.default.attributesOfFileSystem(forPath: NSHomeDirectory()) {
-            free = (a[.systemFreeSize] as? NSNumber)?.int64Value ?? 0
-            total = (a[.systemSize] as? NSNumber)?.int64Value ?? 0
-        }
+        if let current = DiskCapacity.current() { capacity = current }
     }
     func size(_ kind: StorageKind) -> Int64 { snapshot.totals[kind] ?? 0 }
     func count(_ kind: StorageKind) -> Int { snapshot.counts[kind] ?? 0 }
@@ -111,8 +107,14 @@ struct StorageView: View {
                     Text(L("s165")).font(.caption).foregroundStyle(.secondary)
                 }
                 Spacer()
-                Button(L("s178"), systemImage: "sparkles") { ui.showPlanner = true }
-                    .disabled(!m.hasScanned || m.busy || m.cleaning)
+                Button(L("s222"), systemImage: "sparkles") { ui.showAudit = true }.primaryControl()
+                Menu {
+                    Button(L("s178"), systemImage: "target") { ui.showPlanner = true }
+                        .disabled(!m.hasScanned || m.busy || m.cleaning)
+                    Button(L("s242"), systemImage: "icloud") { ui.showCloud = true }
+                } label: {
+                    Image(systemName: "ellipsis.circle").font(.system(size: 18)).frame(width: 28, height: 28)
+                }.menuStyle(.borderlessButton).fixedSize().help(L("s252")).accessibilityLabel(L("s252"))
                 if m.busy { ProgressView().controlSize(.small); Button(L("s016")) { m.cancel() } }
                 else { Button { m.scan() } label: { Image(systemName: "arrow.clockwise") }.help(L("s105")).disabled(m.cleaning) }
             }
@@ -145,23 +147,27 @@ struct StorageView: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .firstTextBaseline) {
                 Text(bytes(m.used)).font(.system(size: 31, weight: .semibold, design: .rounded))
-                Text(L("s167", bytes(m.total))).font(.caption).foregroundStyle(.secondary)
+                Text(L("s167", bytes(m.capacity.total))).font(.caption).foregroundStyle(.secondary)
                 Spacer()
-                Text(L("s168", bytes(m.free))).font(.caption).foregroundStyle(.secondary)
+                Text(L("s168", bytes(m.capacity.available))).font(.caption).foregroundStyle(.secondary)
             }
             GeometryReader { geometry in
                 HStack(spacing: 2) {
                     ForEach(Array(StorageKind.allCases.enumerated()), id: \.element) { index, kind in
-                        let width = CGFloat(Double(m.size(kind)) / Double(max(1, m.total))) * geometry.size.width
+                        let width = CGFloat(Double(m.size(kind)) / Double(max(1, m.capacity.total))) * geometry.size.width
                         if width >= 2 { Rectangle().fill(Color.primary.opacity(shades[index])).frame(width: width) }
                     }
-                    let protected = CGFloat(Double(m.protectedSize) / Double(max(1, m.total))) * geometry.size.width
+                    let protected = CGFloat(Double(m.protectedSize) / Double(max(1, m.capacity.total))) * geometry.size.width
                     if protected >= 2 { Rectangle().fill(Color.primary.opacity(0.10)).frame(width: protected) }
                     Spacer(minLength: 0)
                 }
             }.frame(height: 12).clipShape(Capsule())
-            Text(m.busy ? L("s170") + " " + m.status : (m.hasScanned ? L("s171", m.snapshot.files.count + m.snapshot.apps.count) : L("s170")))
+            Text(m.busy ? (m.status.isEmpty ? L("s170") : m.status) : (m.hasScanned ? L("s171", m.snapshot.files.count + m.snapshot.apps.count) : L("s170")))
                 .font(.caption).foregroundStyle(.secondary)
+            if m.capacity.reclaimable > 0 {
+                Text(L("s253", bytes(m.capacity.reclaimable)))
+                    .font(.caption2).foregroundStyle(.secondary)
+            }
         }.padding(20).glassPanel(radius: 20)
     }
 
@@ -185,23 +191,6 @@ struct StorageView: View {
                             .background(m.kind == kind ? Color.primary.opacity(0.08) : .clear, in: RoundedRectangle(cornerRadius: 11))
                     }.buttonStyle(.plain)
                 }
-                Divider().padding(.vertical, 5)
-                Button { ui.showAudit = true } label: {
-                    HStack(spacing: 11) {
-                        Image(systemName: "chart.bar.xaxis").frame(width: 20).foregroundStyle(.secondary)
-                        Text(L("s222")).font(.caption).multilineTextAlignment(.leading)
-                        Spacer()
-                        Image(systemName: "chevron.right").font(.caption2)
-                    }.padding(11).contentShape(Rectangle())
-                }.buttonStyle(.plain).help(L("s236"))
-                Button { ui.showCloud = true } label: {
-                    HStack(spacing: 11) {
-                        Image(systemName: "icloud").frame(width: 20).foregroundStyle(.secondary)
-                        Text(L("s242")).font(.caption)
-                        Spacer()
-                        Image(systemName: "chevron.right").font(.caption2)
-                    }.padding(11).contentShape(Rectangle())
-                }.buttonStyle(.plain).help(L("s243"))
             }.padding(10)
         }.glassPanel(radius: 18)
     }

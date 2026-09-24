@@ -106,7 +106,7 @@
   "s105": "Scansiona di nuovo",
   "s106": "Esame",
   "s107": "Spazio di archiviazione Mac",
-  "s108": "Libero da {0}",
+  "s108": "Disponibili su {0}",
   "s109": "TROVATO PER LA REVISIONE",
   "s110": "Scansione...",
   "s111": "Articoli: {0} · nessun duplicato",
@@ -166,7 +166,7 @@
   "s165": "File personali e app installate",
   "s166": "Dimensioni approssimative. Vengono esaminate solo le cartelle personali standard; i dati di sistema e protetti non possono essere eliminati qui.",
   "s167": "di {0}",
-  "s168": "{0} liberi",
+  "s168": "{0} disponibili",
   "s169": "Esplora lo spazio restante",
   "s170": "Analisi dei file…",
   "s171": "{0} file e app esaminati",
@@ -214,7 +214,7 @@
   "s213": "Accesso ai file",
   "s214": "Un solo passaggio per una panoramica più completa",
   "s215": "macOS chiede separatamente l’accesso alle cartelle protette. Per una panoramica completa, aggiungi MacTidy ad Accesso completo al disco nelle Impostazioni di Sistema. Solo tu puoi autorizzarlo.",
-  "s216": "Puoi continuare senza. Le cartelle non leggibili saranno segnalate. Riavvia MacTidy dopo aver modificato l’accesso.",
+  "s216": "Puoi continuare senza questo accesso. L’elenco di pulizia includerà solo i file accessibili a MacTidy. Riavvia MacTidy dopo aver modificato l’accesso.",
   "s217": "Continua",
   "s218": "Impostazioni accesso ai file",
   "s219": "La pulizia settimanale di Download richiede accesso ai file anche per MacTidy Helper. Aggiungilo ad Accesso completo al disco.",
@@ -249,5 +249,7 @@
   "s248": "Nessun file iCloud scaricato disponibile",
   "s249": "Verifica dei file iCloud…",
   "s250": "Gli elementi iCloud sono esclusi dalla pulizia settimanale.",
-  "s251": "Questo file iCloud è cambiato o non è più completamente caricato e scaricato."
+  "s251": "Questo file iCloud è cambiato o non è più completamente caricato e scaricato.",
+  "s252": "Altro",
+  "s253": "Include circa {0} che macOS può liberare automaticamente."
 }

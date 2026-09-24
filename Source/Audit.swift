@@ -68,6 +68,7 @@ struct AuditResult: Sendable {
     var candidates: [Candidate] = []
     var notes: [String] = []
     var completed: Set<CleanupCategory> = []
+    var unavailableChosenFolder = false
 }
 struct Audit {
     static let installerExtensions: Set<String> = ["dmg", "pkg", "iso", "xip", "mpkg"]
@@ -130,7 +131,10 @@ struct Audit {
                 }
                 result.completed.insert(category)
             } catch is CancellationError { throw CancellationError() }
-              catch { result.notes.append("\(category.title): \(error.localizedDescription)") }
+              catch {
+                  if category == .large { result.unavailableChosenFolder = true }
+                  else { result.notes.append("\(category.title): \(error.localizedDescription)") }
+              }
         }
         result.candidates = deduplicate(result.candidates)
         return result

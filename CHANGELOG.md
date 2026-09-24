@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.8.0
+
+- Simplify navigation: a clear storage action, a compact More menu, and scan settings that reveal categories only when needed.
+- Remove technical skipped-item counts and reports from the interface; retain actionable errors when a chosen folder cannot be read or a requested move fails.
+- Match macOS Storage's available-space estimate, including space macOS can reclaim automatically, and explain that portion in both disk summaries.
+
 ## 2.7.0
 
 - Show specific large personal files, user app-data folders, and removable third-party content such as individual Arturia libraries in Explore remaining space. System folders, Users totals, and protected Apple data are excluded from the cleanup list.

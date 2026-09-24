@@ -106,7 +106,7 @@
   "s105": "Quét lại",
   "s106": "Quét",
   "s107": "Bộ nhớ Mac",
-  "s108": "Miễn phí {0}",
+  "s108": "Khả dụng trên {0}",
   "s109": "TÌM THẤY ĐỂ XEM XÉT",
   "s110": "Quét...",
   "s111": "Các mặt hàng: {0} · không trùng lặp",
@@ -166,7 +166,7 @@
   "s165": "Tệp cá nhân và ứng dụng đã cài đặt",
   "s166": "Dung lượng chỉ là ước tính. Chỉ quét các thư mục cá nhân thông thường; dữ liệu hệ thống và được bảo vệ không thể dọn tại đây.",
   "s167": "trên {0}",
-  "s168": "Còn trống {0}",
+  "s168": "Khả dụng {0}",
   "s169": "Khám phá dung lượng còn lại",
   "s170": "Đang phân tích tệp…",
   "s171": "Đã kiểm tra {0} tệp và ứng dụng",
@@ -214,7 +214,7 @@
   "s213": "Quyền truy cập tệp",
   "s214": "Một bước thiết lập để xem ổ đĩa đầy đủ hơn",
   "s215": "macOS yêu cầu riêng quyền truy cập các thư mục được bảo vệ. Để xem toàn bộ ổ đĩa, hãy thêm MacTidy vào Quyền truy cập toàn bộ ổ đĩa trong Cài đặt hệ thống. Chỉ bạn mới có thể chấp thuận.",
-  "s216": "Bạn có thể tiếp tục mà không cấp quyền. Thư mục không đọc được sẽ được đánh dấu. Khởi động lại MacTidy sau khi thay đổi quyền.",
+  "s216": "Bạn có thể tiếp tục mà không cấp quyền. Danh sách dọn dẹp chỉ hiển thị tệp MacTidy có thể truy cập. Khởi động lại MacTidy sau khi thay đổi quyền.",
   "s217": "Tiếp tục",
   "s218": "Cài đặt quyền truy cập tệp",
   "s219": "Dọn dẹp Tải về hằng tuần cũng cần quyền truy cập tệp cho MacTidy Helper. Hãy thêm ứng dụng này vào Quyền truy cập toàn bộ ổ đĩa.",
@@ -249,5 +249,7 @@
   "s248": "Không có tệp iCloud đã tải xuống",
   "s249": "Đang kiểm tra tệp iCloud…",
   "s250": "Mục iCloud bị loại khỏi dọn dẹp hằng tuần.",
-  "s251": "Tệp iCloud này đã thay đổi hoặc không còn được tải đầy đủ lên và xuống."
+  "s251": "Tệp iCloud này đã thay đổi hoặc không còn được tải đầy đủ lên và xuống.",
+  "s252": "Thêm",
+  "s253": "Bao gồm khoảng {0} mà macOS có thể tự động giải phóng."
 }

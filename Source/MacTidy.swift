@@ -51,14 +51,12 @@ enum ResultSort: String, CaseIterable {
     @Published var completed: Set<CleanupCategory> = []
     @Published var currentCategory: CleanupCategory?
     @Published var notes: [String] = []
-    @Published var showNotes = false
     @Published var search = ""
     @Published var sort = ResultSort.size
     @Published var status = L("s089")
     @Published var error: String?
     @Published var confirm = false
-    @Published var free: Int64 = 0
-    @Published var total: Int64 = 0
+    @Published var capacity = DiskCapacity(total: 0, immediateFree: 0, available: 0)
     @Published var excluded = Set(UserDefaults.standard.stringArray(forKey: "excludedPaths") ?? [])
     @Published var weeklyEnabled = WeeklySchedule.enabled
     @Published var weeklyBusy = false
@@ -84,10 +82,7 @@ enum ResultSort: String, CaseIterable {
     var hiddenSelection: Int { selected.subtracting(Set(visible.map(\.id))).count }
     init() { refreshDisk() }
     func refreshDisk() {
-        if let a = try? FileManager.default.attributesOfFileSystem(forPath: NSHomeDirectory()) {
-            free = (a[.systemFreeSize] as? NSNumber)?.int64Value ?? 0
-            total = (a[.systemSize] as? NSNumber)?.int64Value ?? 0
-        }
+        if let current = DiskCapacity.current() { capacity = current }
     }
     func reset() {
         guard !cleaning else { return }
@@ -126,7 +121,8 @@ enum ResultSort: String, CaseIterable {
                 let result = try await task.value
                 guard generation == token else { return }
                 candidates = result.candidates; notes = result.notes; completed = result.completed; hasScanned = true
-                status = L("s094" , candidates.count) + (notes.isEmpty ? "" : L("s095"))
+                status = L("s094" , candidates.count)
+                if result.unavailableChosenFolder { error = L("s002", displayPath(config.folder)) }
             } catch is CancellationError { if generation == token { status = L("s008") } }
               catch { if generation == token { self.error = error.localizedDescription; status = L("s096") } }
             if generation == token { busy = false; worker = nil; currentCategory = nil; refreshDisk() }
@@ -169,6 +165,7 @@ struct ContentView: View {
     @StateObject private var m = Model()
     @StateObject private var ui = CleanupUIState()
     @StateObject private var updater = UpdateModel()
+    @State private var showCategories = false
     @Environment(\.openWindow) private var openWindow
 
     var body: some View {
@@ -227,14 +224,14 @@ struct ContentView: View {
             }
             Spacer()
             Button { openWindow(id: "storage") } label: {
-                Image(systemName: "internaldrive").font(.system(size: 17)).frame(width: 30, height: 30)
-            }.buttonStyle(.plain).help(L("s164")).accessibilityLabel(L("s164"))
-            Button { openWindow(id: "applications") } label: {
-                Image(systemName: "square.grid.2x2").font(.system(size: 17)).frame(width: 30, height: 30)
-            }.buttonStyle(.plain).help(L("s014")).accessibilityLabel(L("s014"))
-            Button { ui.showSettings = true } label: {
-                Image(systemName: "slider.horizontal.3").font(.system(size: 17)).frame(width: 30, height: 30)
-            }.buttonStyle(.plain).help(L("s129")).accessibilityLabel(L("s129"))
+                Label(L("s164"), systemImage: "internaldrive")
+            }.buttonStyle(.bordered).help(L("s164"))
+            Menu {
+                Button(L("s014"), systemImage: "square.grid.2x2") { openWindow(id: "applications") }
+                Button(L("s129"), systemImage: "slider.horizontal.3") { ui.showSettings = true }
+            } label: {
+                Image(systemName: "ellipsis.circle").font(.system(size: 18)).frame(width: 30, height: 30)
+            }.menuStyle(.borderlessButton).fixedSize().help(L("s252")).accessibilityLabel(L("s252"))
         }
     }
 
@@ -256,11 +253,15 @@ struct ContentView: View {
     private var diskSummary: some View {
         VStack(spacing: 14) {
             Image(systemName: "internaldrive").font(.system(size: 28, weight: .ultraLight)).foregroundStyle(.secondary)
-            Text(bytes(m.free)).font(.system(size: 43, weight: .semibold, design: .rounded)).monospacedDigit()
-            Text(L("s108", bytes(m.total))).font(.callout).foregroundStyle(.secondary)
-            ProgressView(value: Double(max(0, m.total - m.free)), total: Double(max(1, m.total)))
+            Text(bytes(m.capacity.available)).font(.system(size: 43, weight: .semibold, design: .rounded)).monospacedDigit()
+            Text(L("s108", bytes(m.capacity.total))).font(.callout).foregroundStyle(.secondary)
+            ProgressView(value: Double(m.capacity.used), total: Double(max(1, m.capacity.total)))
                 .tint(.primary).frame(maxWidth: 340)
             Text(L("s107")).font(.caption).foregroundStyle(.secondary)
+            if m.capacity.reclaimable > 0 {
+                Text(L("s253", bytes(m.capacity.reclaimable)))
+                    .font(.caption2).foregroundStyle(.secondary)
+            }
         }
     }
 
@@ -320,16 +321,18 @@ struct ContentView: View {
                         TextField(L("s119"), text: $m.search).textFieldStyle(.plain)
                         Menu {
                             Button(L("s116")) { m.category = nil }
-                            Divider()
                             ForEach(CleanupCategory.allCases) { category in
                                 Button(category.title) { m.category = category }
+                            }
+                            Divider()
+                            Menu(L("s120")) {
+                                ForEach(ResultSort.allCases, id: \.self) { sort in
+                                    Button(sort.title) { m.sort = sort }
+                                }
                             }
                         } label: {
                             Label(m.category?.title ?? L("s116"), systemImage: "line.3.horizontal.decrease")
                         }.menuStyle(.borderlessButton).fixedSize().help(L("s114"))
-                        Picker(L("s120"), selection: $m.sort) {
-                            ForEach(ResultSort.allCases, id: \.self) { Text($0.title).tag($0) }
-                        }.labelsHidden().frame(width: 120)
                     }.padding(.horizontal, 18).padding(.vertical, 14)
                     Divider()
                 }
@@ -399,11 +402,6 @@ struct ContentView: View {
                     .font(.caption).foregroundStyle(.secondary).lineLimit(1)
             }
             Spacer()
-            if !m.notes.isEmpty {
-                Button { m.showNotes = true } label: {
-                    Label(L("s036", m.notes.count), systemImage: "exclamationmark.circle")
-                }.font(.caption)
-            }
             Button(L("s121")) { m.selected.formUnion(m.visible.map(\.id)) }
                 .disabled(m.visible.isEmpty || m.busy || m.cleaning)
             if !m.selected.isEmpty {
@@ -413,21 +411,6 @@ struct ContentView: View {
                 .primaryControl().disabled(m.selected.isEmpty || m.busy || m.cleaning)
         }
         .padding(17).glassPanel(radius: 18)
-        .sheet(isPresented: $m.showNotes) {
-            VStack(alignment: .leading, spacing: 16) {
-                HStack {
-                    Text(L("s036", m.notes.count)).font(.headline)
-                    Spacer()
-                    Button(L("s043")) { m.showNotes = false }.keyboardShortcut(.escape)
-                }
-                Divider()
-                ScrollView {
-                    Text(m.notes.joined(separator: "\n"))
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .textSelection(.enabled)
-                }
-            }.padding(24).frame(width: 520, height: min(420, CGFloat(130 + m.notes.count * 36)))
-        }
     }
 
     private var settings: some View {
@@ -446,20 +429,23 @@ struct ContentView: View {
                         Image(systemName: "xmark").frame(width: 22, height: 22)
                     }.buttonStyle(.plain).help(L("s197")).accessibilityLabel(L("s197")).keyboardShortcut(.escape)
                 }
-                VStack(alignment: .leading, spacing: 13) {
+                DisclosureGroup(isExpanded: $showCategories) {
+                    VStack(alignment: .leading, spacing: 13) {
+                        ForEach(CleanupCategory.allCases) { category in
+                            Toggle(isOn: Binding(
+                                get: { m.enabled.contains(category) },
+                                set: { m.setCategory(category, enabled: $0) }
+                            )) {
+                                Label(category.title, systemImage: category.symbol)
+                            }.disabled(m.busy || m.cleaning)
+                        }
+                        if !m.excluded.isEmpty {
+                            Button(L("s117", m.excluded.count)) { m.restoreExclusions() }
+                                .font(.caption).disabled(m.busy || m.cleaning)
+                        }
+                    }.padding(.top, 12)
+                } label: {
                     HStack { Text(L("s114")).font(.headline); Spacer(); Text(L("s115", m.enabled.count)).font(.caption).foregroundStyle(.secondary) }
-                    ForEach(CleanupCategory.allCases) { category in
-                        Toggle(isOn: Binding(
-                            get: { m.enabled.contains(category) },
-                            set: { m.setCategory(category, enabled: $0) }
-                        )) {
-                            Label(category.title, systemImage: category.symbol)
-                        }.disabled(m.busy || m.cleaning)
-                    }
-                    if !m.excluded.isEmpty {
-                        Button(L("s117", m.excluded.count)) { m.restoreExclusions() }
-                            .font(.caption).disabled(m.busy || m.cleaning)
-                    }
                 }.padding(18).glassPanel(radius: 18)
                 VStack(alignment: .leading, spacing: 13) {
                     Text(L("s061")).font(.headline)

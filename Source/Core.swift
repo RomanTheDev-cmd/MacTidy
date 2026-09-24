@@ -2,6 +2,26 @@ import Foundation
 import CryptoKit
 import Darwin
 
+struct DiskCapacity: Sendable {
+    let total: Int64
+    let immediateFree: Int64
+    let available: Int64
+
+    var used: Int64 { max(0, total - available) }
+    var reclaimable: Int64 { max(0, available - immediateFree) }
+
+    static func current(at url: URL = FileManager.default.homeDirectoryForCurrentUser) -> DiskCapacity? {
+        guard let attributes = try? FileManager.default.attributesOfFileSystem(forPath: url.path),
+              let size = attributes[.systemSize] as? NSNumber,
+              let free = attributes[.systemFreeSize] as? NSNumber else { return nil }
+        let total = max(0, size.int64Value)
+        let immediateFree = min(total, max(0, free.int64Value))
+        let values = try? url.resourceValues(forKeys: [.volumeAvailableCapacityForImportantUsageKey])
+        let available = min(total, max(0, values?.volumeAvailableCapacityForImportantUsage ?? immediateFree))
+        return DiskCapacity(total: total, immediateFree: immediateFree, available: available)
+    }
+}
+
 struct Entry: Identifiable, Hashable, Sendable {
     var id: String { url.path }
     let url: URL

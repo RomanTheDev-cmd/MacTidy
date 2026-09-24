@@ -106,7 +106,7 @@
   "s105": "Scan Again",
   "s106": "Scan",
   "s107": "Mac storage",
-  "s108": "free of {0}",
+  "s108": "available of {0}",
   "s109": "FOUND FOR REVIEW",
   "s110": "Scanning…",
   "s111": "Items: {0} · no duplicates",
@@ -166,7 +166,7 @@
   "s165": "Personal files and installed apps",
   "s166": "Approximate sizes. Only standard personal folders are scanned; system and protected data cannot be cleaned here.",
   "s167": "of {0}",
-  "s168": "{0} free",
+  "s168": "{0} available",
   "s169": "Explore remaining space",
   "s170": "Analyzing files…",
   "s171": "{0} files and apps reviewed",
@@ -214,7 +214,7 @@
   "s213": "File access",
   "s214": "A single setup step for a fuller disk overview",
   "s215": "macOS asks separately for access to protected folders. For a complete disk overview, add MacTidy to Full Disk Access in System Settings. macOS requires you to approve this yourself.",
-  "s216": "You can continue without it. Any folders that cannot be read will be marked in the disk overview. Restart MacTidy after changing Full Disk Access.",
+  "s216": "You can continue without it. The cleanup list will include only files MacTidy can access. Restart MacTidy after changing Full Disk Access.",
   "s217": "Continue",
   "s218": "File access settings",
   "s219": "Weekly Downloads cleanup also needs file access for MacTidy Helper. Add it in the same Full Disk Access settings.",
@@ -249,5 +249,7 @@
   "s248": "No downloaded iCloud files available",
   "s249": "Checking iCloud files…",
   "s250": "iCloud items are excluded from weekly cleanup.",
-  "s251": "This iCloud file changed or is no longer fully uploaded and downloaded."
+  "s251": "This iCloud file changed or is no longer fully uploaded and downloaded.",
+  "s252": "More",
+  "s253": "Includes about {0} macOS can free automatically."
 }

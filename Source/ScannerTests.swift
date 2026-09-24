@@ -16,7 +16,7 @@ func blockOn(_ gate: DispatchSemaphore) { gate.wait() }
         check(AppLocalization.format("{1} / {0}", ["literal {1}", "second"]) == "second / literal {1}", "translation placeholders cannot expand argument content")
         let catalogs = URL(fileURLWithPath: ProcessInfo.processInfo.environment["MACTIDY_LOCALIZATION_DIR"]!)
         let english = AppLocalization.shared.english
-        check(english.count == 251, "English fallback is complete")
+        check(english.count == 253, "English fallback is complete")
         for url in try FileManager.default.contentsOfDirectory(at: catalogs, includingPropertiesForKeys: nil) where url.pathExtension == "json" {
             let catalog = try JSONDecoder().decode([String: String].self, from: Data(contentsOf: url))
             check(Set(catalog.keys) == Set(english.keys) && english.allSatisfy { AppLocalization.tokens($0.value) == AppLocalization.tokens(catalog[$0.key] ?? "") }, "catalog keys and placeholders: " + url.lastPathComponent)
@@ -40,6 +40,13 @@ func blockOn(_ gate: DispatchSemaphore) { gate.wait() }
         var unsigned = release; unsigned["assets"] = [asset("MacTidy-2.4.0-arm64.pkg", 2_000_000)]
         rejects("unsigned release rejected") { _ = try AvailableUpdate.parse(JSONSerialization.data(withJSONObject: unsigned), current: AppVersion("2.3.0")!) }
         let fm = FileManager.default
+        let capacity = DiskCapacity.current()!
+        let diskURL = fm.homeDirectoryForCurrentUser
+        if let systemAvailable = try diskURL.resourceValues(forKeys: [.volumeAvailableCapacityForImportantUsageKey]).volumeAvailableCapacityForImportantUsage {
+            let tolerance = max(1_000_000_000, capacity.total / 100)
+            check(abs(capacity.available - systemAvailable) < tolerance,
+                  "displayed disk availability follows macOS purgeable-aware capacity")
+        }
         let parsedDisk = DiskAudit.parse("100\t/System/Volumes/Data\n60\t/System/Volumes/Data/Library\n40\t/System/Volumes/Data/Users\n5\t/System/Volumes/Data/Users/name\n", root: DiskAudit.dataRoot)
         check(parsedDisk.0 == 102_400 && parsedDisk.1.map(\.url.lastPathComponent) == ["Library", "Users"], "disk overview parses only direct children and sorts largest first")
         let rawRoot = fm.temporaryDirectory.appendingPathComponent("MacTidy-tests-" + UUID().uuidString)
@@ -211,6 +218,13 @@ func blockOn(_ gate: DispatchSemaphore) { gate.wait() }
         try fm.setAttributes([.modificationDate: old], ofItemAtPath: home.appendingPathComponent("Library/Logs/old.log").path)
         var config = AuditConfiguration(home: home, folder: home.appendingPathComponent("Downloads"), threshold: 1, categories: Set(CleanupCategory.allCases), now: now)
         let audited = try Audit.scan(config)
+        check(!audited.unavailableChosenFolder, "readable chosen folder has no access warning")
+        var inaccessibleConfig = config
+        inaccessibleConfig.categories = [.large]
+        inaccessibleConfig.folder = root.appendingPathComponent("missing-folder")
+        let inaccessibleAudit = try Audit.scan(inaccessibleConfig)
+        check(inaccessibleAudit.unavailableChosenFolder && inaccessibleAudit.candidates.isEmpty,
+              "inaccessible chosen folder produces an actionable warning")
         check(audited.candidates.filter { $0.entry.url.lastPathComponent == "installer.dmg" }.count == 1, "overlapping categories count a file once")
         check(audited.candidates.first { $0.entry.url.lastPathComponent == "installer.dmg" }?.category == .installers, "installer classification takes priority over large file")
         check(audited.candidates.filter { $0.category == .logs }.map { $0.entry.url.lastPathComponent } == ["old.log"], "only old log files included")

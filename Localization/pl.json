@@ -106,7 +106,7 @@
   "s105": "Zeskanuj ponownie",
   "s106": "Zeskanować",
   "s107": "Pamięć masowa komputerów Mac",
-  "s108": "Wolny od {0}",
+  "s108": "Dostępne z {0}",
   "s109": "ZNALEZIONE DO PRZEGLĄDU",
   "s110": "Skanowanie...",
   "s111": "Przedmioty: {0} · brak duplikatów",
@@ -166,7 +166,7 @@
   "s165": "Pliki osobiste i zainstalowane aplikacje",
   "s166": "Rozmiary są przybliżone. Sprawdzane są tylko zwykłe foldery osobiste; danych systemowych i chronionych nie można tutaj usuwać.",
   "s167": "z {0}",
-  "s168": "Wolne {0}",
+  "s168": "Dostępne {0}",
   "s169": "Sprawdź pozostałe miejsce",
   "s170": "Analizowanie plików…",
   "s171": "Sprawdzono plików i aplikacji: {0}",
@@ -214,7 +214,7 @@
   "s213": "Dostęp do plików",
   "s214": "Jeden krok do pełniejszego przeglądu dysku",
   "s215": "macOS osobno prosi o dostęp do chronionych folderów. Aby zobaczyć cały dysk, dodaj MacTidy do Pełnego dostępu do dysku w Ustawieniach systemowych. Tylko Ty możesz to zatwierdzić.",
-  "s216": "Możesz kontynuować bez niego. Niedostępne foldery zostaną oznaczone. Uruchom MacTidy ponownie po zmianie dostępu.",
+  "s216": "Możesz kontynuować bez tego dostępu. Lista czyszczenia pokaże tylko pliki dostępne dla MacTidy. Uruchom MacTidy ponownie po zmianie dostępu.",
   "s217": "Kontynuuj",
   "s218": "Ustawienia dostępu do plików",
   "s219": "Cotygodniowe czyszczenie Pobranych wymaga dostępu do plików także dla MacTidy Helper. Dodaj go do Pełnego dostępu do dysku.",
@@ -249,5 +249,7 @@
   "s248": "Brak pobranych plików iCloud",
   "s249": "Sprawdzanie plików iCloud…",
   "s250": "Elementy iCloud są wykluczone z cotygodniowego czyszczenia.",
-  "s251": "Ten plik iCloud zmienił się lub nie jest już w pełni przesłany i pobrany."
+  "s251": "Ten plik iCloud zmienił się lub nie jest już w pełni przesłany i pobrany.",
+  "s252": "Więcej",
+  "s253": "W tym około {0}, które macOS może zwolnić automatycznie."
 }

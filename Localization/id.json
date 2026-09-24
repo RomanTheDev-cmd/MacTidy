@@ -106,7 +106,7 @@
   "s105": "Pindai Lagi",
   "s106": "Memindai",
   "s107": "Penyimpanan Mac",
-  "s108": "Bebas dari {0}",
+  "s108": "Tersedia dari {0}",
   "s109": "DITEMUKAN UNTUK DITINJAU",
   "s110": "Memindai...",
   "s111": "Item: {0} · tidak ada duplikat",
@@ -214,7 +214,7 @@
   "s213": "Akses file",
   "s214": "Satu langkah pengaturan untuk tampilan disk yang lebih lengkap",
   "s215": "macOS meminta akses ke folder terlindungi secara terpisah. Untuk melihat seluruh disk, tambahkan MacTidy ke Akses Disk Penuh di Pengaturan Sistem. Hanya Anda yang dapat menyetujuinya.",
-  "s216": "Anda dapat melanjutkan tanpa izin ini. Folder yang tidak bisa dibaca akan ditandai. Mulai ulang MacTidy setelah mengubah akses.",
+  "s216": "Anda dapat melanjutkan tanpa izin ini. Daftar pembersihan hanya menampilkan file yang dapat diakses MacTidy. Mulai ulang MacTidy setelah mengubah akses.",
   "s217": "Lanjutkan",
   "s218": "Pengaturan akses file",
   "s219": "Pembersihan Unduhan mingguan juga memerlukan akses file untuk MacTidy Helper. Tambahkan ke Akses Disk Penuh.",
@@ -249,5 +249,7 @@
   "s248": "Tidak ada file iCloud yang sudah diunduh",
   "s249": "Memeriksa file iCloud…",
   "s250": "Item iCloud dikecualikan dari pembersihan mingguan.",
-  "s251": "File iCloud ini berubah atau tidak lagi terunggah dan terunduh sepenuhnya."
+  "s251": "File iCloud ini berubah atau tidak lagi terunggah dan terunduh sepenuhnya.",
+  "s252": "Lainnya",
+  "s253": "Termasuk sekitar {0} yang dapat dikosongkan macOS secara otomatis."
 }

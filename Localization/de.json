@@ -106,7 +106,7 @@
   "s105": "Erneut Scannen",
   "s106": "Scan",
   "s107": "Mac-Speicher",
-  "s108": "Frei von {0}",
+  "s108": "Verfügbar von {0}",
   "s109": "ZUR ÜBERPRÜFUNG GEFUNDEN",
   "s110": "Scannen...",
   "s111": "Artikel: {0} · keine Duplikate",
@@ -166,7 +166,7 @@
   "s165": "Persönliche Dateien und installierte Apps",
   "s166": "Ungefähre Größen. Nur übliche persönliche Ordner werden geprüft; System- und geschützte Daten können hier nicht gelöscht werden.",
   "s167": "von {0}",
-  "s168": "{0} frei",
+  "s168": "{0} verfügbar",
   "s169": "Übrigen Speicher prüfen",
   "s170": "Dateien werden analysiert…",
   "s171": "{0} Dateien und Apps geprüft",
@@ -214,7 +214,7 @@
   "s213": "Dateizugriff",
   "s214": "Ein Einrichtungsschritt für einen umfassenderen Überblick",
   "s215": "macOS fragt den Zugriff auf geschützte Ordner gesondert ab. Für einen vollständigen Überblick fügen Sie MacTidy unter „Vollzugriff auf Festplatte“ hinzu. Nur Sie können dies bestätigen.",
-  "s216": "Sie können ohne diesen Zugriff fortfahren. Nicht lesbare Ordner werden markiert. Starten Sie MacTidy nach einer Zugriffsänderung neu.",
+  "s216": "Sie können ohne diesen Zugriff fortfahren. In der Bereinigungsliste erscheinen nur für MacTidy zugängliche Dateien. Starten Sie MacTidy nach einer Zugriffsänderung neu.",
   "s217": "Weiter",
   "s218": "Dateizugriff-Einstellungen",
   "s219": "Die wöchentliche Downloads-Bereinigung benötigt auch Dateizugriff für MacTidy Helper. Fügen Sie ihn ebenfalls zum Festplattenvollzugriff hinzu.",
@@ -249,5 +249,7 @@
   "s248": "Keine geladenen iCloud-Dateien verfügbar",
   "s249": "iCloud-Dateien werden geprüft…",
   "s250": "iCloud-Objekte sind von der wöchentlichen Bereinigung ausgeschlossen.",
-  "s251": "Diese iCloud-Datei hat sich geändert oder ist nicht mehr vollständig hoch- und heruntergeladen."
+  "s251": "Diese iCloud-Datei hat sich geändert oder ist nicht mehr vollständig hoch- und heruntergeladen.",
+  "s252": "Mehr",
+  "s253": "Davon kann macOS etwa {0} automatisch freigeben."
 }

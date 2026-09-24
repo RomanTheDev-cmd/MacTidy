@@ -14,7 +14,6 @@ import AppKit
     @Published var status = L("s007")
     @Published var error: String?
     @Published var notes: [String] = []
-    @Published var showNotes = false
     @Published var confirm = false
     @Published var running: Set<String> = []
     @Published var unavailable: Set<String> = []
@@ -187,11 +186,6 @@ struct ApplicationsView: View {
                     if !m.selected.isEmpty {
                         Button(L("s028")) { m.selected = [] }.disabled(m.cleaning)
                     }
-                    if !m.notes.isEmpty {
-                        Button { m.showNotes = true } label: {
-                            Label(L("s036", m.notes.count), systemImage: "exclamationmark.circle")
-                        }.font(.caption)
-                    }
                     Button(L("s037"), systemImage: "trash") { m.confirm = true }
                         .primaryControl().disabled(m.selected.isEmpty || m.busy || m.cleaning)
                 }.padding(17).glassPanel(radius: 18)
@@ -199,21 +193,6 @@ struct ApplicationsView: View {
         }
         .padding(28).frame(minWidth: 760, minHeight: 620)
         .background(Color(nsColor: .windowBackgroundColor)).tint(.primary)
-        .sheet(isPresented: $m.showNotes) {
-            VStack(alignment: .leading, spacing: 16) {
-                HStack {
-                    Text(L("s036", m.notes.count)).font(.headline)
-                    Spacer()
-                    Button(L("s043")) { m.showNotes = false }.keyboardShortcut(.escape)
-                }
-                Divider()
-                ScrollView {
-                    Text(m.notes.joined(separator: "\n"))
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .textSelection(.enabled)
-                }
-            }.padding(24).frame(width: 520, height: min(420, CGFloat(130 + m.notes.count * 36)))
-        }
         .onReceive(NotificationCenter.default.publisher(for: .init("MacTidyLanguageUpdated"))) { _ in m.objectWillChange.send() }
         .onAppear { m.refreshRunning() }
         .onReceive(NSWorkspace.shared.notificationCenter.publisher(for: NSWorkspace.didLaunchApplicationNotification)) { _ in m.refreshRunning() }
