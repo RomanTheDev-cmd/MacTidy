@@ -29,9 +29,8 @@ struct PermissionGuideView: View {
             Text(L("s215")).font(.callout)
             Text(L("s216")).font(.callout).foregroundStyle(.secondary)
             if WeeklySchedule.enabled {
-                HStack(spacing: 10) {
-                    Text(L("s219")).font(.caption).foregroundStyle(.secondary)
-                    Spacer(minLength: 8)
+                VStack(alignment: .leading, spacing: 8) {
+                    Text(L("s219")).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
                     Button(L("s220")) {
                         NSWorkspace.shared.activateFileViewerSelecting([WeeklySchedule.installedHelper])
                     }.disabled(!FileManager.default.fileExists(atPath: WeeklySchedule.installedHelper.path))

@@ -6,7 +6,7 @@ A native macOS app for finding large files, reviewing clutter, and moving select
 
 ## Install
 
-1. Download **MacTidy-2.6.0-arm64.pkg** from [Releases](https://github.com/RomanTheDev-cmd/MacTidy/releases/latest).
+1. Download **MacTidy-2.7.0-arm64.pkg** from [Releases](https://github.com/RomanTheDev-cmd/MacTidy/releases/latest).
 2. Double-click the installer and follow the standard macOS installation steps.
 3. Open **MacTidy** in **Applications**.
 
@@ -23,7 +23,8 @@ The prebuilt installer requires **Apple Silicon (M1 or newer) and macOS 13+**. T
 - Reviews application caches, logs older than 30 days, downloaded installers and archives, old downloads, Xcode DerivedData, and large files in a chosen folder.
 - Starts with one Scan button. After the scan, review a clean list, choose files, then confirm Move to Trash. Search, sorting, exclusions and Finder reveal remain available.
 - Deduplicates overlapping results and rechecks files before moving them.
-- The storage window has **Explore remaining space**: it measures the largest folders across the Data volume, lets you browse deeper and reveal items in Finder, and reports the number of local Time Machine snapshots. This explains space outside the personal-file scan without offering one-click removal of protected library or system folders. Figures are approximate because APFS snapshots, shared blocks and access restrictions affect totals.
+- The storage window has **What you can free up**: it lists specific large personal files, eligible user app-data folders, and removable content inside third-party shared folders such as `/Library/Arturia`. Each row has Finder and Trash actions. A confirmation explains the impact, and MacTidy checks the path, identity, and access again before moving the item. System folders, the broad Users total, and protected Apple data are not in this cleanup list. Figures are approximate because APFS snapshots, shared blocks and access restrictions affect totals.
+- A separate **Local iCloud copies** view lists only files already uploaded to iCloud with a downloaded local copy. Its **Remove Download** action uses macOS to evict only the local copy after confirmation; the cloud original stays. Ordinary Trash cleanup and the weekly Downloads task skip iCloud items. iCloud may download a file again when it is opened.
 - The Applications window follows the same flow: scan first, then review apps unused for 30, 90, or 180 days using Spotlight history. Missing history is separate; running applications and MacTidy itself are protected. Apps without sufficient file permissions are marked unavailable and skipped by Select All. Only the app bundle is moved; documents and settings remain.
 - The Storage by Type window estimates space used by photos, videos, audio, documents, installers, archives, apps, and other files. Select any personal-file category, including Other Files, to review individual files and move only selected items to Trash. System and protected folders remain excluded. The Applications category suggests up to three apps not opened for 90 days and opens the dedicated app review.
 - **Free up space** accepts a target in GB and presents alternatives: installers and archives, old downloads, large personal files, or a combined selection. It also links to rarely used apps for separate review. Review each suggested file, change the selection, and confirm before anything moves to Trash. Estimates may fall short of the target.

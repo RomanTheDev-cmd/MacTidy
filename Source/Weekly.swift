@@ -22,6 +22,9 @@ struct WeeklyCleanup {
                           item.deletingLastPathComponent().path == root.path else {
                         throw CleanerError(message: L("s144"))
                     }
+                    guard FileManager.default.isUbiquitousItem(at: item) == false else {
+                        throw CleanerError(message: L("s250"))
+                    }
                     try move(item)
                     moved += 1
                 } catch { failures.append("\(item.lastPathComponent): \(error.localizedDescription)") }

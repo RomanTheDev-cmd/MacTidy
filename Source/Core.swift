@@ -16,7 +16,7 @@ struct CleanerError: LocalizedError {
     var errorDescription: String? { message }
 }
 struct Scanner {
-    static let keys: Set<URLResourceKey> = [.isRegularFileKey, .isDirectoryKey, .isSymbolicLinkKey, .fileSizeKey, .fileAllocatedSizeKey, .contentModificationDateKey, .fileResourceIdentifierKey]
+    static let keys: Set<URLResourceKey> = [.isRegularFileKey, .isDirectoryKey, .isSymbolicLinkKey, .isUbiquitousItemKey, .fileSizeKey, .fileAllocatedSizeKey, .contentModificationDateKey, .fileResourceIdentifierKey]
     static func canonical(_ url: URL) -> URL {
         guard let resolved = realpath(url.path, nil) else { return url.resolvingSymlinksInPath() }
         defer { free(resolved) }
@@ -45,7 +45,7 @@ struct Scanner {
     static func measure(_ url: URL) throws -> (size: Int64, stamp: String) {
         try Task.checkCancellation()
         let v = try values(url)
-        guard v.isSymbolicLink != true else { throw CleanerError(message: L("s077")) }
+        guard v.isSymbolicLink != true, v.isUbiquitousItem != true else { throw CleanerError(message: L("s077")) }
         let initial = try stamp(v)
         if v.isRegularFile == true { return (Int64(v.fileAllocatedSize ?? v.fileSize ?? 0), initial) }
         guard v.isDirectory == true else { throw CleanerError(message: L("s078")) }
@@ -58,6 +58,7 @@ struct Scanner {
         for case let item as URL in e {
             try Task.checkCancellation()
             let v = try values(item)
+            guard v.isUbiquitousItem != true else { throw CleanerError(message: L("s077")) }
             // Record symlinks, but never follow them or call skipDescendants on them.
             records.append(item.path + "|" + (try stamp(v)))
             if v.isRegularFile == true && v.isSymbolicLink != true { total += Int64(v.fileAllocatedSize ?? v.fileSize ?? 0) }
@@ -78,7 +79,7 @@ struct Scanner {
                 try Task.checkCancellation()
                 do {
                     let v = try values(u)
-                    guard v.isSymbolicLink != true else { continue }
+                    guard v.isSymbolicLink != true, v.isUbiquitousItem != true else { continue }
                     let measured = try measure(u)
                     if measured.size > 0 { result.entries.append(Entry(url: u, size: measured.size, stamp: measured.stamp, directory: v.isDirectory == true)) }
                 } catch is CancellationError { throw CancellationError() }
@@ -92,7 +93,10 @@ struct Scanner {
                 try Task.checkCancellation()
                 do {
                     let v = try values(u)
-                    if v.isSymbolicLink == true { continue }
+                    if v.isSymbolicLink == true || v.isUbiquitousItem == true {
+                        if v.isDirectory == true { e.skipDescendants() }
+                        continue
+                    }
                     if v.isDirectory == true && ["Library", "System", "Applications", "node_modules", ".git"].contains(u.lastPathComponent) { e.skipDescendants(); continue }
                     if v.isRegularFile == true, Int64(v.fileSize ?? 0) >= threshold {
                         result.entries.append(Entry(url: u, size: Int64(v.fileSize ?? 0), stamp: try stamp(v), directory: false))
@@ -112,7 +116,7 @@ struct Cleaner {
         guard Scanner.isInside(u, root: root), Scanner.canonical(u).path == u.path,
               Scanner.canonical(root).path == root.path else { throw CleanerError(message: L("s081")) }
         let v = try Scanner.values(u)
-        guard v.isSymbolicLink != true else { throw CleanerError(message: L("s082")) }
+        guard v.isSymbolicLink != true, v.isUbiquitousItem != true else { throw CleanerError(message: L("s082")) }
         let current: String
         switch mode {
         case .caches:

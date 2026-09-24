@@ -16,7 +16,7 @@ func blockOn(_ gate: DispatchSemaphore) { gate.wait() }
         check(AppLocalization.format("{1} / {0}", ["literal {1}", "second"]) == "second / literal {1}", "translation placeholders cannot expand argument content")
         let catalogs = URL(fileURLWithPath: ProcessInfo.processInfo.environment["MACTIDY_LOCALIZATION_DIR"]!)
         let english = AppLocalization.shared.english
-        check(english.count == 221, "English fallback is complete")
+        check(english.count == 251, "English fallback is complete")
         for url in try FileManager.default.contentsOfDirectory(at: catalogs, includingPropertiesForKeys: nil) where url.pathExtension == "json" {
             let catalog = try JSONDecoder().decode([String: String].self, from: Data(contentsOf: url))
             check(Set(catalog.keys) == Set(english.keys) && english.allSatisfy { AppLocalization.tokens($0.value) == AppLocalization.tokens(catalog[$0.key] ?? "") }, "catalog keys and placeholders: " + url.lastPathComponent)
@@ -46,11 +46,44 @@ func blockOn(_ gate: DispatchSemaphore) { gate.wait() }
         try fm.createDirectory(at: rawRoot, withIntermediateDirectories: true)
         let root = Scanner.canonical(rawRoot)
         defer { try? fm.removeItem(at: root) }
+        check(try CloudLocal.scan(root: root).isEmpty, "ordinary folders are not scanned as iCloud Drive")
+        let ordinaryCloudCandidate = CloudLocalFile(url: root.appendingPathComponent("local.bin"), bytes: 8192, stamp: "test")
+        rejects("ordinary files cannot use the iCloud local-copy action") {
+            try CloudLocal.evict(ordinaryCloudCandidate, root: root) { _ in }
+        }
         func write(_ path: String, _ size: Int = 8192) throws {
             let url = root.appendingPathComponent(path)
             try fm.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
             try Data(repeating: 1, count: size).write(to: url)
         }
+        try write("appdatahome/Library/Application Support/Vendor/data.bin")
+        let appDataHome = root.appendingPathComponent("appdatahome")
+        let vendor = appDataHome.appendingPathComponent("Library/Application Support/Vendor")
+        let reviewableData = DiskOpportunity(url: vendor, bytes: 8192, kind: .userAppData,
+                                             stamp: try Scanner.stamp(Scanner.values(vendor)))
+        var movedAppData: [URL] = []
+        try DiskAudit.trashAppData(reviewableData, home: appDataHome) { movedAppData.append($0) }
+        check(movedAppData == [vendor], "explicitly selected user app data can be validated before Trash")
+        try write("appdatahome/Library/Application Support/Vendor/new.bin")
+        rejects("changed app data is rejected before Trash") { try DiskAudit.trashAppData(reviewableData, home: appDataHome) { _ in } }
+        let protectedData = DiskOpportunity(url: appDataHome.appendingPathComponent("Library/Application Support/com.apple.test"), bytes: 8192, kind: .userAppData, stamp: "test")
+        rejects("Apple app data is not offered for direct Trash") { try DiskAudit.trashAppData(protectedData, home: appDataHome) { _ in } }
+        let sharedData = DiskOpportunity(url: vendor, bytes: 8192, kind: .sharedAppData, stamp: nil)
+        rejects("shared app resources cannot be trashed directly") { try DiskAudit.trashAppData(sharedData, home: appDataHome) { _ in } }
+        try write("Library/Arturia/Analog Lab V/content.bin")
+        let sharedVendor = root.appendingPathComponent("Library/Arturia/Analog Lab V")
+        let eligibleShared = DiskOpportunity(url: sharedVendor, bytes: 8192, kind: .sharedAppData,
+                                             stamp: try Scanner.stamp(Scanner.values(sharedVendor)))
+        var movedShared: [URL] = []
+        try DiskAudit.trashAppData(eligibleShared, home: appDataHome, library: root.appendingPathComponent("Library")) { movedShared.append($0) }
+        check(movedShared == [sharedVendor], "individual third-party shared content can be validated before Trash")
+        let protectedShared = DiskOpportunity(url: root.appendingPathComponent("Library/Audio/Instrument"), bytes: 8192,
+                                              kind: .sharedAppData, stamp: "test")
+        rejects("system audio library cannot be offered for direct Trash") {
+            try DiskAudit.trashAppData(protectedShared, home: appDataHome, library: root.appendingPathComponent("Library")) { _ in }
+        }
+        let nestedData = DiskOpportunity(url: vendor.appendingPathComponent("data.bin"), bytes: 8192, kind: .userAppData, stamp: "test")
+        rejects("nested app data cannot be trashed by a folder suggestion") { try DiskAudit.trashAppData(nestedData, home: appDataHome) { _ in } }
         for name in ["scan/large.bin", "scan/Library/skip.bin", "scan/.hidden/skip.bin", "scan/sample.app/skip.bin", "scan/nested/second.bin"] { try write(name) }
         try write("scan/small.bin", 10)
         try write("storagehome/Documents/report.pdf")

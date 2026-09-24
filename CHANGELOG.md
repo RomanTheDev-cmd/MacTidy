@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.7.0
+
+- Show specific large personal files, user app-data folders, and removable third-party content such as individual Arturia libraries in Explore remaining space. System folders, Users totals, and protected Apple data are excluded from the cleanup list.
+- Move each selected item to Trash only after a specific confirmation and fresh path, identity, and access checks. Shared program content has an extra warning because removing it can affect the program.
+- Add a separate iCloud local-copy view. It offers only fully uploaded and locally downloaded files and uses macOS Remove Download; ordinary cleanup and the weekly task exclude iCloud items.
+- Give the weekly helper's access explanation enough space to display in full.
+
 ## 2.6.0
 
 - Add a navigable disk breakdown that measures large folders, reports local Time Machine snapshot count and marks folders that macOS does not allow MacTidy to read. The unexplained remainder is explicitly approximate and cannot be attributed to one folder.

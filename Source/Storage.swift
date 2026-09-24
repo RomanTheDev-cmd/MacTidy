@@ -146,7 +146,7 @@ struct StorageScanner {
                 try Task.checkCancellation()
                 do {
                     let values = try URL(fileURLWithPath: url.path).resourceValues(forKeys: keys)
-                    if values.isSymbolicLink == true { enumerator.skipDescendants(); continue }
+                    if values.isSymbolicLink == true || values.isUbiquitousItem == true { enumerator.skipDescendants(); continue }
                     if values.isDirectory == true {
                         if protectedDirectoryNames.contains(url.lastPathComponent) || protectedPackageExtensions.contains(url.pathExtension.lowercased()) { enumerator.skipDescendants() }
                         continue

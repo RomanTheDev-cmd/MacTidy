@@ -94,6 +94,7 @@ import AppKit
 @MainActor final class StorageUIState: ObservableObject {
     @Published var showPlanner = false
     @Published var showAudit = false
+    @Published var showCloud = false
 }
 
 struct StorageView: View {
@@ -129,7 +130,8 @@ struct StorageView: View {
         .onDisappear { m.cancel() }
         .onReceive(NotificationCenter.default.publisher(for: .init("MacTidyLanguageUpdated"))) { _ in m.objectWillChange.send() }
         .sheet(isPresented: $ui.showPlanner) { SpacePlannerView(model: m) }
-        .sheet(isPresented: $ui.showAudit) { DiskAuditView(diskUsed: m.used, unclassified: m.hasScanned ? m.protectedSize : nil) }
+        .sheet(isPresented: $ui.showAudit) { DiskAuditView(storage: m) }
+        .sheet(isPresented: $ui.showCloud) { CloudLocalView(storage: m) }
         .alert(L("s102"), isPresented: $m.confirm) {
             Button(L("s039"), role: .cancel) {}
             Button(L("s040"), role: .destructive) { m.trash() }
@@ -187,12 +189,19 @@ struct StorageView: View {
                 Button { ui.showAudit = true } label: {
                     HStack(spacing: 11) {
                         Image(systemName: "chart.bar.xaxis").frame(width: 20).foregroundStyle(.secondary)
-                        Text(L("s169")).font(.caption).multilineTextAlignment(.leading)
+                        Text(L("s222")).font(.caption).multilineTextAlignment(.leading)
                         Spacer()
-                        Text(m.hasScanned ? bytes(m.protectedSize) : "—").font(.caption).monospacedDigit()
                         Image(systemName: "chevron.right").font(.caption2)
                     }.padding(11).contentShape(Rectangle())
-                }.buttonStyle(.plain).help(L("s198"))
+                }.buttonStyle(.plain).help(L("s236"))
+                Button { ui.showCloud = true } label: {
+                    HStack(spacing: 11) {
+                        Image(systemName: "icloud").frame(width: 20).foregroundStyle(.secondary)
+                        Text(L("s242")).font(.caption)
+                        Spacer()
+                        Image(systemName: "chevron.right").font(.caption2)
+                    }.padding(11).contentShape(Rectangle())
+                }.buttonStyle(.plain).help(L("s243"))
             }.padding(10)
         }.glassPanel(radius: 18)
     }

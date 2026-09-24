@@ -1,141 +1,162 @@
 import SwiftUI
 import AppKit
 
-@MainActor final class DiskAuditModel: ObservableObject {
-    @Published var current = DiskAudit.dataRoot
-    @Published var result: DiskAuditResult?
+@MainActor final class DiskCleanupModel: ObservableObject {
+    @Published var opportunities: [DiskOpportunity] = []
     @Published var busy = false
+    @Published var cleaning = false
     @Published var error: String?
-    private var generation = UUID()
-    private var worker: Task<DiskAuditResult, Error>?
+    @Published var fileToTrash: StorageFile?
+    @Published var appDataToTrash: DiskOpportunity?
+    private var worker: Task<[DiskOpportunity], Error>?
 
-    func open(_ url: URL) {
-        let canonical = url.standardizedFileURL
-        guard canonical.path == DiskAudit.dataRoot.path || canonical.path.hasPrefix(DiskAudit.dataRoot.path + "/") else { return }
-        worker?.cancel()
-        current = canonical
-        result = nil
+    func load() {
+        guard !busy else { return }
         busy = true
-        error = nil
-        let token = UUID()
-        generation = token
-        let task = Task.detached(priority: .userInitiated) { try DiskAudit.scan(root: canonical) }
+        let home = FileManager.default.homeDirectoryForCurrentUser
+        let task = Task.detached(priority: .userInitiated) { try DiskAudit.opportunities(home: home) }
         worker = task
-        Task { await finish(task, token: token) }
+        Task {
+            do { opportunities = try await task.value }
+            catch is CancellationError { }
+            catch { self.error = error.localizedDescription }
+            busy = false
+            worker = nil
+        }
     }
-    private func finish(_ task: Task<DiskAuditResult, Error>, token: UUID) async {
-        do {
-            let scan = try await task.value
-            if generation == token { result = scan }
-        } catch is CancellationError { }
-          catch { if generation == token { self.error = error.localizedDescription } }
-        if generation == token { busy = false; worker = nil }
+    func stop() { worker?.cancel(); worker = nil }
+
+    func trashAppData(_ opportunity: DiskOpportunity, storage: StorageModel) {
+        guard !cleaning else { return }
+        cleaning = true
+        error = nil
+        Task {
+            do {
+                try await Task.detached(priority: .userInitiated) { try DiskAudit.trashAppData(opportunity) }.value
+                opportunities.removeAll { $0.id == opportunity.id }
+                storage.refreshDisk()
+            } catch { self.error = error.localizedDescription }
+            cleaning = false
+        }
     }
-    func stop() { generation = UUID(); worker?.cancel(); worker = nil; busy = false }
+}
+
+private enum CleanupItem: Identifiable {
+    case file(StorageFile), appData(DiskOpportunity)
+    var id: String {
+        switch self { case .file(let file): return file.id; case .appData(let data): return data.id }
+    }
+    var size: Int64 {
+        switch self { case .file(let file): return file.entry.size; case .appData(let data): return data.bytes }
+    }
 }
 
 struct DiskAuditView: View {
-    @StateObject private var m = DiskAuditModel()
+    @ObservedObject var storage: StorageModel
+    @StateObject private var m = DiskCleanupModel()
     @Environment(\.dismiss) private var dismiss
     @Environment(\.openWindow) private var openWindow
-    let diskUsed: Int64
-    let unclassified: Int64?
+
+    private var items: [CleanupItem] {
+        let files = storage.hasScanned ? storage.snapshot.files.filter { $0.kind.reviewable && $0.entry.size >= 100_000_000 }.map(CleanupItem.file) : []
+        let appData = m.opportunities.filter { $0.stamp != nil }.map(CleanupItem.appData)
+        return (files + appData).sorted { $0.size > $1.size }
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 15) {
             HStack {
                 VStack(alignment: .leading, spacing: 3) {
-                    Text(L("s198")).font(.system(size: 23, weight: .semibold, design: .rounded))
-                    Text(L("s199")).font(.caption).foregroundStyle(.secondary)
+                    Text(L("s222")).font(.system(size: 23, weight: .semibold, design: .rounded))
+                    Text(L("s236")).font(.caption).foregroundStyle(.secondary)
                 }
                 Spacer()
                 Button { dismiss() } label: { Image(systemName: "xmark").frame(width: 22, height: 22) }
                     .buttonStyle(.plain).help(L("s197")).accessibilityLabel(L("s197")).keyboardShortcut(.escape)
             }
-            HStack(spacing: 12) {
-                figure(L("s200"), bytes(diskUsed))
-                if let unclassified { figure(L("s201"), bytes(unclassified)) }
-                if let result = m.result, result.root == DiskAudit.dataRoot, let measuredBytes = result.measuredBytes {
-                    figure(L("s202"), bytes(measuredBytes))
-                }
-            }
-            Text(L("s203")).font(.caption).foregroundStyle(.secondary)
-            if let result = m.result, result.root == DiskAudit.dataRoot, result.snapshotCount > 0 {
-                Label(L("s204", result.snapshotCount), systemImage: "clock.arrow.circlepath")
-                    .font(.callout).padding(12).frame(maxWidth: .infinity, alignment: .leading)
-                    .background(Color.primary.opacity(0.05), in: RoundedRectangle(cornerRadius: 12))
-            }
-            HStack(spacing: 8) {
-                if m.current != DiskAudit.dataRoot {
-                    Button { m.open(m.current.deletingLastPathComponent()) } label: {
-                        Label(L("s189"), systemImage: "chevron.left")
-                    }
-                }
-                Text(m.current == DiskAudit.dataRoot ? L("s205") : displayPath(m.current))
-                    .font(.headline).lineLimit(1).truncationMode(.middle)
+            HStack {
+                Text(L("s237", items.count, bytes(items.reduce(0) { $0 + $1.size })))
+                    .font(.callout.weight(.semibold))
                 Spacer()
-                if m.busy { ProgressView().controlSize(.small) }
-                Button { m.open(m.current) } label: { Image(systemName: "arrow.clockwise") }
-                    .help(L("s105")).disabled(m.busy)
+                if m.busy || storage.busy { ProgressView().controlSize(.small) }
             }
             Surface {
-                Group {
-                    if m.busy && m.result == nil { ProgressView(L("s206")).frame(maxWidth: .infinity, maxHeight: .infinity) }
-                    else if let result = m.result {
-                        ScrollView {
-                            LazyVStack(spacing: 2) {
-                                ForEach(result.rows) { row in
-                                    HStack(spacing: 11) {
-                                        Image(systemName: rowIsDirectory(row) ? "folder" : "doc").frame(width: 22).foregroundStyle(.secondary)
-                                        VStack(alignment: .leading, spacing: 2) {
-                                            Text(row.url.lastPathComponent).font(.callout.weight(.medium)).lineLimit(1)
-                                            Text(row.url.path).font(.caption2).foregroundStyle(.secondary).lineLimit(1).truncationMode(.middle)
-                                        }
-                                        Spacer(minLength: 5)
-                                        Text(row.bytes.map(bytes) ?? L("s221")).font(.callout.weight(.medium)).foregroundStyle(row.bytes == nil ? .secondary : .primary).monospacedDigit()
-                                        if rowIsDirectory(row) {
-                                            Button { m.open(row.url) } label: { Image(systemName: "chevron.right") }
-                                                .buttonStyle(.plain).help(L("s207", row.url.lastPathComponent))
-                                        }
-                                        Button { NSWorkspace.shared.activateFileViewerSelecting([row.url]) } label: {
-                                            Image(systemName: "arrow.up.right.square")
-                                        }.buttonStyle(.plain).help(L("s208")).accessibilityLabel(L("s208"))
-                                    }
-                                    .padding(.horizontal, 13).padding(.vertical, 9)
-                                    .background(Color.primary.opacity(0.025), in: RoundedRectangle(cornerRadius: 9))
-                                }
-                            }.padding(8)
+                ScrollView {
+                    LazyVStack(spacing: 6) {
+                        ForEach(items) { item in
+                            switch item {
+                            case .file(let file): personalRow(file)
+                            case .appData(let data): appDataRow(data)
+                            }
                         }
-                    } else if let error = m.error {
-                        Text(error).foregroundStyle(.secondary).frame(maxWidth: .infinity, maxHeight: .infinity)
-                    }
+                        if items.isEmpty {
+                            Text(m.busy || storage.busy ? L("s170") : L("s238"))
+                                .foregroundStyle(.secondary).frame(maxWidth: .infinity, minHeight: 180)
+                        }
+                    }.padding(8)
                 }
+            }.frame(maxHeight: .infinity)
+            if !storage.suggestedApps.isEmpty {
+                HStack {
+                    Label(L("s239"), systemImage: "square.grid.2x2").font(.callout)
+                    Spacer()
+                    Button(L("s017")) { openWindow(id: "applications"); dismiss() }
+                }.padding(12).background(Color.primary.opacity(0.04), in: RoundedRectangle(cornerRadius: 12))
             }
-            if m.result?.accessLimited == true {
-                Label(L("s209"), systemImage: "lock.shield")
-                    .font(.caption).foregroundStyle(.secondary)
-            }
-            HStack {
-                Text(L("s210")).font(.caption).foregroundStyle(.secondary)
-                Spacer()
-                Button(L("s211")) { openWindow(id: "storage"); dismiss() }
-                Button(L("s212")) { PermissionGuide.openFullDiskAccess() }
-            }
+            Text(L("s240")).font(.caption).foregroundStyle(.secondary)
+            if let error = m.error { Text(error).font(.caption).foregroundStyle(.red) }
         }
-        .padding(23).frame(width: 760, height: 650)
+        .padding(23).frame(width: 760, height: 610)
         .background(Color(nsColor: .windowBackgroundColor)).tint(.primary)
-        .task { if m.result == nil && !m.busy { m.open(DiskAudit.dataRoot) } }
+        .task { m.load() }
         .onDisappear { m.stop() }
+        .alert(m.appDataToTrash == nil ? L("s232") : L("s234"), isPresented: Binding(get: { m.fileToTrash != nil || m.appDataToTrash != nil }, set: {
+            if !$0 { m.fileToTrash = nil; m.appDataToTrash = nil }
+        })) {
+            Button(L("s039"), role: .cancel) { m.fileToTrash = nil; m.appDataToTrash = nil }
+            Button(L("s040"), role: .destructive) {
+                if let file = m.fileToTrash { storage.trash(files: [file]); dismiss() }
+                if let data = m.appDataToTrash { m.trashAppData(data, storage: storage) }
+                m.fileToTrash = nil; m.appDataToTrash = nil
+            }
+        } message: {
+            Text(m.appDataToTrash.map { data in
+                data.kind == .sharedAppData
+                    ? L("s241", data.url.lastPathComponent, bytes(data.bytes))
+                    : L("s235", data.url.lastPathComponent, bytes(data.bytes))
+            } ?? L("s233"))
+        }
     }
 
-    private func figure(_ title: String, _ value: String) -> some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(title).font(.caption).foregroundStyle(.secondary)
-            Text(value).font(.title3.weight(.semibold)).monospacedDigit()
-        }.frame(maxWidth: .infinity, alignment: .leading).padding(13)
-            .background(Color.primary.opacity(0.05), in: RoundedRectangle(cornerRadius: 12))
+    private func personalRow(_ file: StorageFile) -> some View {
+        row(name: file.entry.url.lastPathComponent, path: file.entry.url.deletingLastPathComponent(),
+            size: file.entry.size, symbol: file.kind.symbol, onTrash: { m.fileToTrash = file },
+            reveal: file.entry.url)
     }
-    private func rowIsDirectory(_ row: DiskAuditRow) -> Bool {
-        (try? row.url.resourceValues(forKeys: [.isDirectoryKey]))?.isDirectory == true
+
+    private func appDataRow(_ data: DiskOpportunity) -> some View {
+        row(name: data.url.lastPathComponent, path: data.url.deletingLastPathComponent(),
+            size: data.bytes, symbol: "square.stack.3d.up", onTrash: { m.appDataToTrash = data },
+            reveal: data.url)
+    }
+
+    private func row(name: String, path: URL, size: Int64, symbol: String,
+                     onTrash: @escaping () -> Void, reveal: URL) -> some View {
+        HStack(spacing: 10) {
+            Image(systemName: symbol).frame(width: 22).foregroundStyle(.secondary)
+            VStack(alignment: .leading, spacing: 3) {
+                Text(name).font(.callout.weight(.medium)).lineLimit(1)
+                Text(displayPath(path)).font(.caption2).foregroundStyle(.secondary)
+                    .lineLimit(1).truncationMode(.middle)
+            }
+            Spacer(minLength: 5)
+            Text(bytes(size)).font(.caption.weight(.semibold)).monospacedDigit()
+            Button(action: onTrash) { Image(systemName: "trash") }
+                .buttonStyle(.plain).help(L("s226")).accessibilityLabel(L("s226"))
+                .disabled(m.cleaning || storage.cleaning)
+            Button { NSWorkspace.shared.activateFileViewerSelecting([reveal]) } label: {
+                Image(systemName: "arrow.up.right.square")
+            }.buttonStyle(.plain).help(L("s208")).accessibilityLabel(L("s208"))
+        }.padding(10).background(Color.primary.opacity(0.04), in: RoundedRectangle(cornerRadius: 10))
     }
 }

@@ -15,6 +15,15 @@ struct DiskAuditResult: Sendable {
     let snapshotCount: Int
 }
 
+enum DiskOpportunityKind: Sendable { case userAppData, sharedAppData }
+struct DiskOpportunity: Identifiable, Sendable {
+    let url: URL
+    let bytes: Int64
+    let kind: DiskOpportunityKind
+    let stamp: String?
+    var id: String { url.path }
+}
+
 enum DiskAudit {
     static let dataRoot = URL(fileURLWithPath: "/System/Volumes/Data", isDirectory: true)
 
@@ -64,12 +73,12 @@ enum DiskAudit {
         return (String(decoding: data, as: UTF8.self), process.terminationStatus == 0)
     }
 
-    static func scan(root: URL) throws -> DiskAuditResult {
+    static func scan(root: URL, includeFiles: Bool = true) throws -> DiskAuditResult {
         let path = root.standardizedFileURL.path
         guard path == dataRoot.path || path.hasPrefix(dataRoot.path + "/") else {
             throw CocoaError(.fileReadNoPermission)
         }
-        let (output, complete) = runDu(["-a", "-x", "-d", "1", "-k", path], timeout: 14)
+        let (output, complete) = runDu((includeFiles ? ["-a"] : []) + ["-x", "-d", "1", "-k", path], timeout: 14)
         try Task.checkCancellation()
         let parsed = parse(output, root: root)
         if parsed.0 != nil && (complete || !parsed.1.isEmpty) {
@@ -102,6 +111,76 @@ enum DiskAudit {
         let rows = sort(children.map { DiskAuditRow(url: $0, bytes: measured[$0.path]) })
         return DiskAuditResult(root: root, measuredBytes: parsed.0, rows: rows,
                                accessLimited: true, snapshotCount: path == dataRoot.path ? localSnapshotCount() : 0)
+    }
+
+    static func opportunities(home: URL, library: URL = URL(fileURLWithPath: "/Library")) throws -> [DiskOpportunity] {
+        let homeOnData = dataRoot.appendingPathComponent(home.path.trimmingCharacters(in: CharacterSet(charactersIn: "/")))
+        let userRoot = homeOnData.appendingPathComponent("Library/Application Support")
+        let protectedLibraryNames: Set<String> = ["Apple", "AppStore", "Audio", "Caches", "ColorSync", "Developer", "Extensions", "Frameworks", "Keychains", "LaunchAgents", "LaunchDaemons", "Logs", "Preferences", "PrivilegedHelperTools", "Receipts", "Security", "System", "Updates"]
+        let vendorRoots = ((try? FileManager.default.contentsOfDirectory(at: library, includingPropertiesForKeys: [.isDirectoryKey, .isSymbolicLinkKey])) ?? [])
+            .filter { candidate in
+                let name = candidate.lastPathComponent
+                let values = try? candidate.resourceValues(forKeys: [.isDirectoryKey, .isSymbolicLinkKey])
+                return values?.isDirectory == true && values?.isSymbolicLink != true &&
+                    !name.hasPrefix(".") && !name.hasPrefix("com.apple.") && !protectedLibraryNames.contains(name) &&
+                    FileManager.default.isWritableFile(atPath: candidate.path)
+            }
+        let roots: [(URL, DiskOpportunityKind)] = [(userRoot, .userAppData)] + vendorRoots.map { vendor in
+            (dataRoot.appendingPathComponent(vendor.path.trimmingCharacters(in: CharacterSet(charactersIn: "/"))), .sharedAppData)
+        }
+        let reserved: Set<String> = ["Application Support", "Audio", "Caches", "Developer", "Extensions", "Frameworks", "LaunchAgents", "LaunchDaemons", "Logs", "Preferences", "PrivilegedHelperTools", "Receipts", "System", "Updates"]
+        var found: [DiskOpportunity] = []
+        for (root, kind) in roots {
+            try Task.checkCancellation()
+            guard FileManager.default.fileExists(atPath: root.path) else { continue }
+            let result = try scan(root: root, includeFiles: false)
+            for row in result.rows {
+                guard let size = row.bytes, size >= 100_000_000,
+                      !row.url.lastPathComponent.hasPrefix("."),
+                      !row.url.lastPathComponent.hasPrefix("com.apple."),
+                      row.url.lastPathComponent != "MacTidy",
+                      !reserved.contains(row.url.lastPathComponent),
+                      FileManager.default.isDeletableFile(atPath: row.url.path),
+                      (try? row.url.resourceValues(forKeys: [.isDirectoryKey, .isSymbolicLinkKey]))?.isDirectory == true,
+                      (try? row.url.resourceValues(forKeys: [.isSymbolicLinkKey]))?.isSymbolicLink != true else { continue }
+                let displayURL = kind == .userAppData
+                    ? home.appendingPathComponent("Library/Application Support").appendingPathComponent(row.url.lastPathComponent)
+                    : library.appendingPathComponent(root.lastPathComponent).appendingPathComponent(row.url.lastPathComponent)
+                let stamp = try? Scanner.stamp(Scanner.values(displayURL))
+                found.append(DiskOpportunity(url: displayURL, bytes: size, kind: kind, stamp: stamp))
+            }
+        }
+        return found.sorted { $0.bytes > $1.bytes }
+    }
+
+    static func trashAppData(_ opportunity: DiskOpportunity, home: URL = FileManager.default.homeDirectoryForCurrentUser,
+                             library: URL = URL(fileURLWithPath: "/Library"),
+                             move: (URL) throws -> Void = { try FileManager.default.trashItem(at: $0, resultingItemURL: nil) }) throws {
+        let item = URL(fileURLWithPath: opportunity.url.path)
+        let userRoot = Scanner.canonical(home.appendingPathComponent("Library/Application Support"))
+        let sharedBase = Scanner.canonical(library)
+        let root = item.deletingLastPathComponent()
+        let sharedVendor = root.deletingLastPathComponent().path == sharedBase.path &&
+            !["Apple", "AppStore", "Audio", "Caches", "ColorSync", "Developer", "Extensions", "Frameworks", "Keychains", "LaunchAgents", "LaunchDaemons", "Logs", "Preferences", "PrivilegedHelperTools", "Receipts", "Security", "System", "Updates"].contains(root.lastPathComponent) &&
+            !root.lastPathComponent.hasPrefix(".") && !root.lastPathComponent.hasPrefix("com.apple.") &&
+            Scanner.canonical(root).path == root.path
+        let name = item.lastPathComponent
+        guard (opportunity.kind == .userAppData && root.path == userRoot.path) ||
+              (opportunity.kind == .sharedAppData && sharedVendor),
+              let stamp = opportunity.stamp,
+              Scanner.canonical(item).path == item.path,
+              !name.hasPrefix("."), !name.hasPrefix("com.apple."), name != "MacTidy",
+              FileManager.default.isDeletableFile(atPath: item.path),
+              FileManager.default.isWritableFile(atPath: root.path) else {
+            throw CleanerError(message: L("s081"))
+        }
+        let values = try Scanner.values(item)
+        guard values.isDirectory == true, values.isSymbolicLink != true,
+              try Scanner.stamp(values) == stamp else {
+            throw CleanerError(message: L("s084"))
+        }
+        _ = try Scanner.measure(item)
+        try move(item)
     }
 
     private static func localSnapshotCount() -> Int {

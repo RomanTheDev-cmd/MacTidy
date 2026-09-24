@@ -40,7 +40,7 @@ struct ApplicationScanner {
                 guard url.pathExtension.lowercased() == "app" else { continue }
                 do {
                     let v = try Scanner.values(url)
-                    guard v.isDirectory == true, v.isSymbolicLink != true, Scanner.canonical(url).path == url.path else { continue }
+                    guard v.isDirectory == true, v.isSymbolicLink != true, v.isUbiquitousItem != true, Scanner.canonical(url).path == url.path else { continue }
                     guard seen.insert(url.path).inserted else { continue }
                     let bundle = Bundle(url: url)
                     if let ownBundleID, bundle?.bundleIdentifier == ownBundleID { continue }
@@ -64,7 +64,7 @@ struct ApplicationScanner {
             throw CleanerError(message: L("s003"))
         }
         guard !runningPaths.contains(u.path) else { throw CleanerError(message: L("s004")) }
-        guard canMoveToTrash(app) else { throw CleanerError(message: L("s196")) }
+        guard canMoveToTrash(app), try Scanner.values(u).isUbiquitousItem != true else { throw CleanerError(message: L("s196")) }
         if let ownBundleID, Bundle(url: u)?.bundleIdentifier == ownBundleID {
             throw CleanerError(message: L("s005"))
         }
