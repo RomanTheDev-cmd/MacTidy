@@ -89,63 +89,118 @@ import AppKit
 struct ApplicationsView: View {
     @StateObject private var m = ApplicationsModel()
     var body: some View {
-        VStack(spacing: 18) {
-            HStack(spacing: 14) {
-                Image(systemName: "square.grid.2x2").font(.system(size: 30, weight: .light)).frame(width: 48, height: 48).glassPanel(radius: 14)
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(L("s014")).font(.system(size: 28, weight: .semibold, design: .rounded))
-                    Text(L("s015")).foregroundStyle(.secondary)
+        VStack(spacing: 20) {
+            HStack(spacing: 12) {
+                Image(systemName: "square.grid.2x2")
+                    .font(.system(size: 20, weight: .light)).frame(width: 42, height: 42).glassPanel(radius: 12)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(L("s014")).font(.system(size: 23, weight: .semibold, design: .rounded))
+                    Text(L("s015")).font(.caption).foregroundStyle(.secondary)
                 }
                 Spacer()
-                if m.busy { ProgressView().controlSize(.small); Button(L("s016")) { m.cancel() }.controlSize(.large) }
-                else { Button(L("s017"), systemImage: "magnifyingglass") { m.scan() }.controlSize(.large).primaryControl().disabled(m.cleaning) }
+                if m.hasScanned && !m.busy {
+                    Button { m.scan() } label: { Image(systemName: "arrow.clockwise") }
+                        .buttonStyle(.borderless).help(L("s017")).accessibilityLabel(L("s017"))
+                        .disabled(m.cleaning)
+                }
             }
-            HStack(spacing: 16) {
-                Picker(L("s018"), selection: $m.days) { Text(L("s019")).tag(30); Text(L("s020")).tag(90); Text(L("s021")).tag(180); Text(L("s022")).tag(0) }.frame(width: 275)
-                Toggle(L("s023"), isOn: $m.includeUnknown).toggleStyle(.checkbox).help(L("s024"))
-                Spacer()
-                TextField(L("s025"), text: $m.search).textFieldStyle(.roundedBorder).frame(width: 220)
-            }.padding(16).glassPanel(radius: 18)
-            HStack(alignment: .top, spacing: 16) {
+            if !m.hasScanned && !m.busy {
+                VStack(spacing: 16) {
+                    Spacer()
+                    Image(systemName: "square.grid.2x2")
+                        .font(.system(size: 52, weight: .ultraLight)).foregroundStyle(.secondary)
+                    Text(L("s031")).font(.system(size: 25, weight: .semibold, design: .rounded))
+                    Text(L("s033")).font(.callout).foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                    Button { m.scan() } label: {
+                        Label(L("s017"), systemImage: "magnifyingglass")
+                            .frame(minWidth: 220).padding(.vertical, 4)
+                    }.primaryControl().controlSize(.large).disabled(m.cleaning)
+                    Spacer()
+                }.frame(maxWidth: .infinity, maxHeight: .infinity).glassPanel(radius: 24)
+            } else {
+                HStack(spacing: 12) {
+                    Text(L("s026", m.visible.count)).font(.title2.weight(.semibold))
+                    Spacer()
+                    if m.busy {
+                        ProgressView().controlSize(.small)
+                        Button(L("s016")) { m.cancel() }.buttonStyle(.bordered)
+                    }
+                }
                 Surface {
                     VStack(spacing: 0) {
-                        HStack {
-                            Text(L("s026" , m.visible.count)).font(.subheadline.weight(.semibold)); Spacer()
-                            Button(L("s027")) { m.refreshRunning(); m.selected.formUnion(m.visible.filter { !m.running.contains($0.id) }.map(\.id)) }.disabled(m.visible.isEmpty || m.cleaning)
-                            Button(L("s028")) { m.selected = [] }.disabled(m.selected.isEmpty || m.cleaning)
-                        }.font(.caption).padding(14)
-                        Divider()
+                        if m.hasScanned {
+                            HStack(spacing: 14) {
+                                Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
+                                TextField(L("s025"), text: $m.search).textFieldStyle(.plain)
+                                Picker(L("s018"), selection: $m.days) {
+                                    Text(L("s019")).tag(30)
+                                    Text(L("s020")).tag(90)
+                                    Text(L("s021")).tag(180)
+                                    Text(L("s022")).tag(0)
+                                }.labelsHidden().frame(width: 180)
+                                Menu {
+                                    Toggle(L("s023"), isOn: $m.includeUnknown)
+                                    .help(L("s024"))
+                                } label: { Image(systemName: "line.3.horizontal.decrease") }
+                                    .menuStyle(.borderlessButton).fixedSize().help(L("s023"))
+                            }.padding(.horizontal, 18).padding(.vertical, 14)
+                            Divider()
+                        }
                         if m.visible.isEmpty {
-                            VStack(spacing: 14) {
+                            VStack(spacing: 13) {
                                 if m.busy { ProgressView().controlSize(.large) }
-                                else { Image(systemName: "square.grid.2x2").font(.system(size: 42, weight: .ultraLight)).foregroundStyle(.secondary) }
-                                Text(m.busy ? L("s029") : (m.hasScanned ? L("s030") : L("s031"))).font(.title3.weight(.semibold))
-                                Text(m.busy ? m.status : (m.hasScanned ? L("s032") : L("s033"))).font(.callout).foregroundStyle(.secondary).multilineTextAlignment(.center)
-                            }.padding(24).frame(maxWidth: .infinity, maxHeight: .infinity)
+                                else { Image(systemName: "checkmark.circle").font(.system(size: 38, weight: .ultraLight)).foregroundStyle(.secondary) }
+                                Text(m.busy ? L("s029") : L("s030")).font(.title3.weight(.semibold))
+                                Text(m.busy ? m.status : L("s032"))
+                                    .font(.callout).foregroundStyle(.secondary).multilineTextAlignment(.center)
+                            }.frame(maxWidth: .infinity, maxHeight: .infinity)
                         } else {
                             ScrollView {
-                                LazyVStack(spacing: 3) { ForEach(m.visible) { app in appRow(app) } }.padding(6)
+                                LazyVStack(spacing: 4) { ForEach(m.visible) { app in appRow(app) } }.padding(9)
                             }
                         }
-                        if m.showNotes && !m.notes.isEmpty {
+                        if let app = m.focusedApp {
                             Divider()
-                            ScrollView { Text(m.notes.joined(separator: "\n")).font(.caption).textSelection(.enabled).padding(12) }.frame(height: 90)
+                            HStack(spacing: 12) {
+                                Text(app.name).font(.callout.weight(.medium)).lineLimit(1)
+                                Spacer()
+                                Text(bytes(app.entry.size)).font(.caption).foregroundStyle(.secondary)
+                                Button(L("s048")) { NSWorkspace.shared.activateFileViewerSelecting([app.url]) }.font(.caption)
+                            }.padding(.horizontal, 16).padding(.vertical, 10)
                         }
                     }
-                }.frame(maxWidth: .infinity, maxHeight: .infinity)
-                details.frame(width: 260)
-            }.frame(maxHeight: .infinity)
-            HStack {
-                if m.cleaning { ProgressView().controlSize(.small) }
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(L("s034" , m.selected.count, bytes(m.pickedSize))).font(.headline)
-                    Text(m.hiddenCount > 0 ? L("s035" , m.hiddenCount) : m.status).font(.caption).foregroundStyle(.secondary).lineLimit(2)
                 }
-                Spacer()
-                if !m.notes.isEmpty { Button(L("s036" , m.notes.count)) { m.showNotes.toggle() }.font(.caption) }
-                Button(L("s037"), systemImage: "trash") { m.confirm = true }.controlSize(.large).primaryControl().disabled(m.selected.isEmpty || m.busy || m.cleaning)
-            }.padding(16).glassPanel(radius: 18)
-        }.padding(24).padding(.top, 14).frame(minWidth: 1000, minHeight: 700).background(Color(nsColor: .windowBackgroundColor)).tint(.primary)
+                HStack(spacing: 12) {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(L("s034", m.selected.count, bytes(m.pickedSize))).font(.subheadline.weight(.semibold))
+                        Text(m.hiddenCount > 0 ? L("s035", m.hiddenCount) : m.status)
+                            .font(.caption).foregroundStyle(.secondary).lineLimit(1)
+                    }
+                    Spacer()
+                    Menu {
+                        Button(L("s027")) {
+                            m.refreshRunning()
+                            m.selected.formUnion(m.visible.filter { !m.running.contains($0.id) }.map(\.id))
+                        }.disabled(m.visible.isEmpty || m.cleaning)
+                        Button(L("s028")) { m.selected = [] }.disabled(m.selected.isEmpty || m.cleaning)
+                        if !m.notes.isEmpty {
+                            Divider()
+                            Button(L("s036", m.notes.count)) { m.showNotes = true }
+                        }
+                    } label: { Image(systemName: "ellipsis") }
+                        .menuStyle(.borderlessButton).fixedSize()
+                    Button(L("s037"), systemImage: "trash") { m.confirm = true }
+                        .primaryControl().disabled(m.selected.isEmpty || m.busy || m.cleaning)
+                }.padding(17).glassPanel(radius: 18)
+            }
+        }
+        .padding(28).frame(minWidth: 760, minHeight: 620)
+        .background(Color(nsColor: .windowBackgroundColor)).tint(.primary)
+        .sheet(isPresented: $m.showNotes) {
+            ScrollView { Text(m.notes.joined(separator: "\n")).textSelection(.enabled).padding(24) }
+                .frame(width: 480, height: 300)
+        }
         .onReceive(NotificationCenter.default.publisher(for: .init("MacTidyLanguageUpdated"))) { _ in m.objectWillChange.send() }
         .onAppear { m.refreshRunning() }
         .onReceive(NSWorkspace.shared.notificationCenter.publisher(for: NSWorkspace.didLaunchApplicationNotification)) { _ in m.refreshRunning() }
@@ -154,9 +209,11 @@ struct ApplicationsView: View {
             Button(L("s039"), role: .cancel) {}
             Button(L("s040"), role: .destructive) { m.trash() }
         } message: {
-            Text(L("s041" , m.selected.count, bytes(m.pickedSize), m.hiddenCount))
+            Text(L("s041", m.selected.count, bytes(m.pickedSize), m.hiddenCount))
         }
-        .alert(L("s042"), isPresented: Binding(get: { m.error != nil }, set: { if !$0 { m.error = nil } })) { Button(L("s043")) { m.error = nil } } message: { Text(m.error ?? "") }
+        .alert(L("s042"), isPresented: Binding(get: { m.error != nil }, set: { if !$0 { m.error = nil } })) {
+            Button(L("s043")) { m.error = nil }
+        } message: { Text(m.error ?? "") }
     }
     private func appRow(_ app: InstalledApplication) -> some View {
         HStack(spacing: 12) {

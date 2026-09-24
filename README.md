@@ -1,12 +1,12 @@
 # MacTidy
 
-A native macOS app for finding large files, reviewing clutter, and moving selected items to Trash. One window for disk cleanup, a separate window for reviewing rarely used applications, and an optional weekly Downloads cleanup.
+A native macOS app for finding large files, reviewing clutter, and moving selected items to Trash. A simple first screen with one Scan button, a separate window for reviewing rarely used applications, and an optional weekly Downloads cleanup.
 
 [Русская документация](README.ru.md) · [Download installer](https://github.com/RomanTheDev-cmd/MacTidy/releases/latest)
 
 ## Install
 
-1. Download **MacTidy-2.1.0-arm64.pkg** from [Releases](https://github.com/RomanTheDev-cmd/MacTidy/releases/latest).
+1. Download **MacTidy-2.2.0-arm64.pkg** from [Releases](https://github.com/RomanTheDev-cmd/MacTidy/releases/latest).
 2. Double-click the installer and follow the standard macOS installation steps.
 3. Open **MacTidy** in **Applications**.
 
@@ -17,9 +17,9 @@ The prebuilt installer requires **Apple Silicon (M1 or newer) and macOS 13+**. T
 ## What it does
 
 - Reviews application caches, logs older than 30 days, downloaded installers and archives, old downloads, Xcode DerivedData, and large files in a chosen folder.
-- Offers search, size/name/date sorting, persistent exclusions, Finder reveal, and explicit selection before moving items to Trash.
+- Starts with one Scan button. After the scan, review a clean list, choose files, then confirm Move to Trash. Search, sorting, exclusions and Finder reveal remain available.
 - Deduplicates overlapping results and rechecks files before moving them.
-- Shows applications unused for 30, 90, or 180 days using Spotlight history. Missing history is separate; running applications and MacTidy itself are protected. Only the app bundle is moved; documents and settings remain.
+- The Applications window follows the same flow: scan first, then review apps unused for 30, 90, or 180 days using Spotlight history. Missing history is separate; running applications and MacTidy itself are protected. Only the app bundle is moved; documents and settings remain.
 - Optionally moves **everything in Downloads, including new files, hidden files, and whole folders**, to Trash every Sunday at 12:00 local time. This requires explicit opt-in. Trash is never emptied.
 - Uses native glass on macOS 26+, standard materials on earlier versions, and the system appearance. The monochrome icon has a transparent background.
 

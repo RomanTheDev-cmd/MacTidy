@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.2.0
+
+- Redesigned cleanup and applications windows around one primary action: scan, review, select, then move to Trash.
+- Moved category selection, size threshold and weekly schedule into a settings sheet; search and filters appear when results are available.
+- Reduced default window sizes and kept existing cleanup safeguards.
+
 ## 2.1.0
 
 - Standalone macOS package installer with a fixed Applications destination.
