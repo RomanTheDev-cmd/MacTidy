@@ -6,7 +6,7 @@ A native macOS app for finding large files, reviewing clutter, and moving select
 
 ## Install
 
-1. Download **MacTidy-2.4.0-arm64.pkg** from [Releases](https://github.com/RomanTheDev-cmd/MacTidy/releases/latest).
+1. Download **MacTidy-2.5.0-arm64.pkg** from [Releases](https://github.com/RomanTheDev-cmd/MacTidy/releases/latest).
 2. Double-click the installer and follow the standard macOS installation steps.
 3. Open **MacTidy** in **Applications**.
 
@@ -19,10 +19,11 @@ The prebuilt installer requires **Apple Silicon (M1 or newer) and macOS 13+**. T
 - Reviews application caches, logs older than 30 days, downloaded installers and archives, old downloads, Xcode DerivedData, and large files in a chosen folder.
 - Starts with one Scan button. After the scan, review a clean list, choose files, then confirm Move to Trash. Search, sorting, exclusions and Finder reveal remain available.
 - Deduplicates overlapping results and rechecks files before moving them.
-- The Applications window follows the same flow: scan first, then review apps unused for 30, 90, or 180 days using Spotlight history. Missing history is separate; running applications and MacTidy itself are protected. Only the app bundle is moved; documents and settings remain.
-- The Storage by Type window estimates space used by photos, videos, audio, documents, installers, archives, apps, and other files. Select a category to review individual files, including installer packages, or open the dedicated app review. Up to three apps not opened for 90 days are suggested in the app category; none are selected automatically. Unknown files, system data, and protected folders are read-only.
+- The Applications window follows the same flow: scan first, then review apps unused for 30, 90, or 180 days using Spotlight history. Missing history is separate; running applications and MacTidy itself are protected. Apps without sufficient file permissions are marked unavailable and skipped by Select All. Only the app bundle is moved; documents and settings remain.
+- The Storage by Type window estimates space used by photos, videos, audio, documents, installers, archives, apps, and other files. Select any personal-file category, including Other Files, to review individual files and move only selected items to Trash. System and protected folders remain excluded. The Applications category suggests up to three apps not opened for 90 days and opens the dedicated app review.
+- **Free up space** accepts a target in GB and presents alternatives: installers and archives, old downloads, large personal files, or a combined selection. It also links to rarely used apps for separate review. Review each suggested file, change the selection, and confirm before anything moves to Trash. Estimates may fall short of the target.
 - Optionally moves **everything in Downloads, including new files, hidden files, and whole folders**, to Trash every Sunday at 12:00 local time. This requires explicit opt-in. Trash is never emptied.
-- Uses native glass on macOS 26+, standard materials on earlier versions, and the system appearance. The monochrome icon has a transparent background.
+- Uses native glass on macOS 26+, standard materials on earlier versions, and the system appearance. The cool blue-silver icon has a transparent background.
 
 Cleanup always needs judgment: old or large files can still be valuable. Close relevant apps before clearing caches and close Xcode before clearing DerivedData. Disk space figures are estimates; APFS sharing, snapshots and cloud files affect actual reclaimed space.
 

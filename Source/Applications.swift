@@ -12,6 +12,12 @@ struct InstalledApplication: Identifiable, Hashable, Sendable {
 }
 struct ApplicationScan: Sendable { var apps: [InstalledApplication] = []; var notes: [String] = [] }
 struct ApplicationScanner {
+    static func canMoveToTrash(_ app: InstalledApplication) -> Bool {
+        let fm = FileManager.default
+        return fm.isDeletableFile(atPath: app.url.path)
+            && fm.isWritableFile(atPath: app.url.path)
+            && fm.isWritableFile(atPath: app.url.deletingLastPathComponent().path)
+    }
     static func lastUsed(_ url: URL) -> Date? {
         guard let metadata = MDItemCreate(kCFAllocatorDefault, url.path as CFString) else { return nil }
         return MDItemCopyAttribute(metadata, kMDItemLastUsedDate) as? Date
@@ -58,6 +64,7 @@ struct ApplicationScanner {
             throw CleanerError(message: L("s003"))
         }
         guard !runningPaths.contains(u.path) else { throw CleanerError(message: L("s004")) }
+        guard canMoveToTrash(app) else { throw CleanerError(message: L("s196")) }
         if let ownBundleID, Bundle(url: u)?.bundleIdentifier == ownBundleID {
             throw CleanerError(message: L("s005"))
         }

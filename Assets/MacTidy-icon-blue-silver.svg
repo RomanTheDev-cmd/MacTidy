@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="handle" x1="210" y1="170" x2="449" y2="445" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#d9edfa"/><stop offset="0.34" stop-color="#7ea8c5"/><stop offset="0.72" stop-color="#416b8c"/><stop offset="1" stop-color="#234966"/>
+    </linearGradient>
+    <linearGradient id="collar" x1="310" y1="370" x2="492" y2="506" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#f2faff"/><stop offset="0.38" stop-color="#aacce1"/><stop offset="1" stop-color="#497b9d"/>
+    </linearGradient>
+    <linearGradient id="head" x1="288" y1="497" x2="650" y2="559" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#d9f0ff"/><stop offset="0.32" stop-color="#93bed9"/><stop offset="0.72" stop-color="#4e84a9"/><stop offset="1" stop-color="#2d607f"/>
+    </linearGradient>
+    <linearGradient id="leftBristle" x1="330" y1="602" x2="410" y2="864" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#9ccbe4"/><stop offset="0.5" stop-color="#568eb5"/><stop offset="1" stop-color="#315e80"/>
+    </linearGradient>
+    <linearGradient id="middleBristle" x1="457" y1="566" x2="622" y2="855" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#d0ebf9"/><stop offset="0.5" stop-color="#78add0"/><stop offset="1" stop-color="#3f739b"/>
+    </linearGradient>
+    <linearGradient id="rightBristle" x1="578" y1="522" x2="762" y2="757" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#e3f4fc"/><stop offset="0.47" stop-color="#8fbddd"/><stop offset="1" stop-color="#4c83a9"/>
+    </linearGradient>
+    <linearGradient id="spark" x1="677" y1="278" x2="749" y2="383" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#ffffff"/><stop offset="0.5" stop-color="#d4efff"/><stop offset="1" stop-color="#80bde1"/>
+    </linearGradient>
+  </defs>
+  <g stroke="#244e6c" stroke-width="7" stroke-linejoin="round" stroke-linecap="round">
+    <path d="M251 188 C286 163 323 172 343 208 L437 378 L334 437 L221 288 C195 255 215 209 251 188 Z" fill="url(#handle)"/>
+    <path d="M235 216 C268 185 303 190 323 221" fill="none" stroke="#f4fbff" stroke-opacity=".75" stroke-width="8"/>
+    <path d="M327 414 L424 371 C451 360 470 384 481 411 L494 435 L349 507 C323 496 304 447 327 414 Z" fill="url(#collar)"/>
+    <path d="M339 427 L427 389" fill="none" stroke="#ffffff" stroke-opacity=".72" stroke-width="8"/>
+    <path d="M320 615 C336 704 321 778 298 826 C284 859 377 865 461 843 C482 838 484 827 478 808 L419 581 Z" fill="url(#leftBristle)"/>
+    <path d="M419 581 L531 529 C553 619 614 735 671 789 C691 808 667 824 643 832 C590 852 539 860 494 848 C481 844 482 826 478 808 Z" fill="url(#middleBristle)"/>
+    <path d="M531 529 L635 480 C682 562 746 617 807 645 C834 657 823 685 804 707 C761 756 726 782 693 788 C674 792 668 774 658 761 C607 692 560 603 531 529 Z" fill="url(#rightBristle)"/>
+    <path d="M322 504 C387 460 497 415 566 394 C600 384 630 403 643 433 C652 454 648 473 633 486 C533 536 401 591 322 621 C289 631 270 611 274 577 C278 551 295 522 322 504 Z" fill="url(#head)"/>
+    <path d="M311 535 C395 477 515 429 572 414" fill="none" stroke="#f4fbff" stroke-opacity=".8" stroke-width="9"/>
+    <path d="M711 250 C721 295 739 315 785 329 C740 343 720 364 711 408 C701 363 682 344 638 329 C682 314 701 295 711 250 Z" fill="url(#spark)" stroke-width="5"/>
+  </g>
+</svg>

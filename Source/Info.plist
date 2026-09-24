@@ -7,7 +7,7 @@
 	<key>CFBundleExecutable</key>
 	<string>MacTidy</string>
 	<key>CFBundleIconFile</key>
-	<string>MacTidyGraphite</string>
+	<string>MacTidyBlueSilver</string>
 	<key>CFBundleIdentifier</key>
 	<string>local.mactidy.cleaner</string>
 	<key>CFBundleLocalizations</key>
@@ -26,9 +26,9 @@
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
-	<string>2.4.0</string>
+	<string>2.5.0</string>
 	<key>CFBundleVersion</key>
-	<string>10</string>
+	<string>11</string>
 	<key>LSMinimumSystemVersion</key>
 	<string>13.0</string>
 	<key>NSDesktopFolderUsageDescription</key>

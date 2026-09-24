@@ -1,5 +1,12 @@
 # Changelog
 
+## 2.5.0
+
+- Let users review and move other personal files to Trash while keeping system and protected locations excluded.
+- Add a compact space-saving planner: enter a target in GB and review alternatives based on installers and archives, genuinely old downloads, large personal files, or a combined selection, with a link to rarely used apps.
+- Correct the disk-capacity label and replace the monochrome icon with a transparent cool blue-silver vector design.
+- Mark applications requiring additional file permissions before selection, so bulk cleanup skips them and explains why.
+
 ## 2.4.0
 
 - Added a Storage by Type window for personal files, installer packages and installed apps, with a compact list of apps unused for 90 days.

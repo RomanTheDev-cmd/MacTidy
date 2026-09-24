@@ -16,7 +16,7 @@ func blockOn(_ gate: DispatchSemaphore) { gate.wait() }
         check(AppLocalization.format("{1} / {0}", ["literal {1}", "second"]) == "second / literal {1}", "translation placeholders cannot expand argument content")
         let catalogs = URL(fileURLWithPath: ProcessInfo.processInfo.environment["MACTIDY_LOCALIZATION_DIR"]!)
         let english = AppLocalization.shared.english
-        check(english.count == 177, "English fallback is complete")
+        check(english.count == 196, "English fallback is complete")
         for url in try FileManager.default.contentsOfDirectory(at: catalogs, includingPropertiesForKeys: nil) where url.pathExtension == "json" {
             let catalog = try JSONDecoder().decode([String: String].self, from: Data(contentsOf: url))
             check(Set(catalog.keys) == Set(english.keys) && english.allSatisfy { AppLocalization.tokens($0.value) == AppLocalization.tokens(catalog[$0.key] ?? "") }, "catalog keys and placeholders: " + url.lastPathComponent)
@@ -63,7 +63,19 @@ func blockOn(_ gate: DispatchSemaphore) { gate.wait() }
         let overview = try StorageScanner.scan(home: storageHome, appRoots: [], ownBundleID: nil)
         check(overview.counts[.documents] == 1 && overview.counts[.installers] == 1 && overview.counts[.archives] == 1 && overview.counts[.photos] == 1, "personal file types and packages classified")
         check(!overview.files.contains { $0.entry.url.path.contains("photoslibrary") || $0.entry.url.lastPathComponent == "outside.pdf" || $0.entry.url.lastPathComponent == ".secret.key" }, "protected packages, links and hidden files skipped")
-        check(overview.files.contains { $0.kind == .other && $0.entry.url.lastPathComponent == "cache.db" } && !StorageKind.other.reviewable, "unknown file types are read-only")
+        check(overview.files.contains { $0.kind == .other && $0.entry.url.lastPathComponent == "cache.db" } && StorageKind.other.reviewable && !StorageKind.applications.reviewable, "other personal files are reviewable; apps use their own window")
+        let other = overview.files.first { $0.kind == .other }!
+        var movedOther: [URL] = []
+        let otherResult = StorageScanner.trash([other]) { movedOther.append($0) }
+        check(otherResult.removed == [other.id] && movedOther == [other.entry.url], "selected other personal file can be moved to Trash")
+        let plans = StoragePlanner.suggest(snapshot: overview, target: 1)
+        check(plans.first { $0.kind == .packages }?.files.allSatisfy { $0.kind == .installers || $0.kind == .archives } == true, "package suggestion contains installers and archives only")
+        let plannedLarge = StorageFile(entry: Entry(url: other.entry.url, size: 150_000_000, stamp: other.entry.stamp, directory: false), root: other.root, kind: .other, modified: Date().addingTimeInterval(-40 * 86400), created: Date().addingTimeInterval(-40 * 86400), added: nil)
+        let largePlans = StoragePlanner.suggest(snapshot: StorageSnapshot(files: [plannedLarge]), target: 100_000_000)
+        check(largePlans.first { $0.kind == .largeFiles }?.targetReached == true, "large personal file can meet space target")
+        check(largePlans.first { $0.kind == .combined }?.targetReached == true, "combined suggestion can reach space target")
+        let freshDownload = StorageFile(entry: plannedLarge.entry, root: storageHome.appendingPathComponent("Downloads"), kind: .other, modified: Date().addingTimeInterval(-40 * 86400), created: Date(), added: Date())
+        check(StoragePlanner.suggest(snapshot: StorageSnapshot(files: [freshDownload]), target: 1).first { $0.kind == .oldDownloads } == nil, "recently downloaded old file is not suggested as an old download")
         let document = overview.files.first { $0.kind == .documents }!
         var movedStorage: [URL] = []
         let planned = StorageScanner.trash([document]) { movedStorage.append($0) }
@@ -192,6 +204,14 @@ func blockOn(_ gate: DispatchSemaphore) { gate.wait() }
         check(appScan.apps.count == 1, "application discovery handles absent own bundle ID")
         let example = appScan.apps[0]
         _ = try ApplicationScanner.validate(example, allowedRoots: [appsRoot], runningPaths: [], ownBundleID: "other.app")
+        check(ApplicationScanner.canMoveToTrash(example), "writable app in writable folder is removable")
+        try fm.setAttributes([.posixPermissions: 0o555], ofItemAtPath: appURL.path)
+        check(!ApplicationScanner.canMoveToTrash(example), "read-only app is not offered for cleanup")
+        rejects("read-only app is rejected before Trash") { _ = try ApplicationScanner.validate(example, allowedRoots: [appsRoot], runningPaths: [], ownBundleID: nil) }
+        try fm.setAttributes([.posixPermissions: 0o755], ofItemAtPath: appURL.path)
+        try fm.setAttributes([.posixPermissions: 0o555], ofItemAtPath: appsRoot.path)
+        check(!ApplicationScanner.canMoveToTrash(example), "app in read-only folder is not offered for cleanup")
+        try fm.setAttributes([.posixPermissions: 0o755], ofItemAtPath: appsRoot.path)
         rejects("running app cannot be removed") { _ = try ApplicationScanner.validate(example, allowedRoots: [appsRoot], runningPaths: [example.id], ownBundleID: nil) }
         rejects("app outside allowed roots cannot be removed") { _ = try ApplicationScanner.validate(example, allowedRoots: [root.appendingPathComponent("Elsewhere")], runningPaths: [], ownBundleID: nil) }
         rejects("MacTidy cannot remove itself") { _ = try ApplicationScanner.validate(example, allowedRoots: [appsRoot], runningPaths: [], ownBundleID: "test.example") }

@@ -27,13 +27,81 @@ enum StorageKind: String, CaseIterable, Identifiable, Sendable {
         case .other: return "ellipsis.circle"
         }
     }
-    var reviewable: Bool { self != .other }
+    var reviewable: Bool { self != .applications }
 }
 struct StorageFile: Identifiable, Sendable {
     var id: String { entry.id }
     let entry: Entry
     let root: URL
     let kind: StorageKind
+    let modified: Date?
+    let created: Date?
+    let added: Date?
+}
+enum StoragePlanKind: String, CaseIterable, Identifiable {
+    case packages, oldDownloads, largeFiles, combined
+    var id: String { rawValue }
+    var title: String {
+        switch self {
+        case .packages: return L("s180")
+        case .oldDownloads: return L("s181")
+        case .largeFiles: return L("s182")
+        case .combined: return L("s195")
+        }
+    }
+    var symbol: String {
+        switch self {
+        case .packages: return "shippingbox"
+        case .oldDownloads: return "clock.arrow.circlepath"
+        case .largeFiles: return "doc.zipper"
+        case .combined: return "square.stack.3d.up"
+        }
+    }
+}
+struct StoragePlan: Identifiable {
+    var id: StoragePlanKind { kind }
+    let kind: StoragePlanKind
+    let files: [StorageFile]
+    let size: Int64
+    let targetReached: Bool
+}
+struct StoragePlanner {
+    static func suggest(snapshot: StorageSnapshot, target: Int64, now: Date = Date()) -> [StoragePlan] {
+        guard target > 0 else { return [] }
+        func isOldDownload(_ file: StorageFile) -> Bool {
+            file.root.lastPathComponent == "Downloads" && Audit.matches(.oldDownloads, url: file.entry.url, modified: file.modified, created: file.created, added: file.added, now: now)
+        }
+        return StoragePlanKind.allCases.compactMap { kind in
+            let candidates = snapshot.files.filter { file in
+                switch kind {
+                case .packages: return file.kind == .installers || file.kind == .archives
+                case .oldDownloads: return isOldDownload(file)
+                case .largeFiles: return file.entry.size >= 100_000_000
+                case .combined: return file.entry.size >= 10_000_000 || file.kind == .installers || file.kind == .archives || isOldDownload(file)
+                }
+            }.sorted { a, b in
+                if kind == .combined {
+                    func priority(_ file: StorageFile) -> Int {
+                        if file.kind == .installers || file.kind == .archives { return 0 }
+                        if isOldDownload(file) { return 1 }
+                        return 2
+                    }
+                    let pa = priority(a), pb = priority(b)
+                    if pa != pb { return pa < pb }
+                }
+                return a.entry.size == b.entry.size ? a.id < b.id : a.entry.size > b.entry.size
+            }
+            var files: [StorageFile] = []
+            var size: Int64 = 0
+            for file in candidates {
+                files.append(file)
+                let (next, overflow) = size.addingReportingOverflow(file.entry.size)
+                size = overflow ? Int64.max : next
+                if size >= target { break }
+            }
+            return files.isEmpty ? nil : StoragePlan(kind: kind, files: files, size: size, targetReached: size >= target)
+        }
+    }
 }
 struct StorageSnapshot: Sendable {
     var files: [StorageFile] = []
@@ -62,6 +130,7 @@ struct StorageScanner {
     static func scan(home: URL, appRoots: [URL] = [URL(fileURLWithPath: "/Applications"), FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Applications")], ownBundleID: String?, progress: @Sendable (String) -> Void = { _ in }) throws -> StorageSnapshot {
         var snapshot = StorageSnapshot()
         let fm = FileManager.default
+        let keys = Scanner.keys.union([.creationDateKey, .addedToDirectoryDateKey])
         for name in rootNames {
             try Task.checkCancellation()
             let requested = home.appendingPathComponent(name)
@@ -70,14 +139,14 @@ struct StorageScanner {
             catch { snapshot.skipped += 1; continue }
             let root = Scanner.canonical(requested)
             progress(name)
-            guard let enumerator = fm.enumerator(at: root, includingPropertiesForKeys: Array(Scanner.keys), options: [.skipsHiddenFiles, .skipsPackageDescendants], errorHandler: { _, _ in snapshot.skipped += 1; return true }) else {
+            guard let enumerator = fm.enumerator(at: root, includingPropertiesForKeys: Array(keys), options: [.skipsHiddenFiles, .skipsPackageDescendants], errorHandler: { _, _ in snapshot.skipped += 1; return true }) else {
                 snapshot.skipped += 1; continue
             }
             for case let url as URL in enumerator {
                 try Task.checkCancellation()
                 do {
-                    let values = try Scanner.values(url)
-                    if values.isSymbolicLink == true { continue }
+                    let values = try URL(fileURLWithPath: url.path).resourceValues(forKeys: keys)
+                    if values.isSymbolicLink == true { enumerator.skipDescendants(); continue }
                     if values.isDirectory == true {
                         if protectedDirectoryNames.contains(url.lastPathComponent) || protectedPackageExtensions.contains(url.pathExtension.lowercased()) { enumerator.skipDescendants() }
                         continue
@@ -86,7 +155,7 @@ struct StorageScanner {
                     let size = Int64(values.fileAllocatedSize ?? values.fileSize ?? 0)
                     let kind = classify(url)
                     let entry = Entry(url: url, size: size, stamp: try Scanner.stamp(values), directory: false)
-                    snapshot.files.append(StorageFile(entry: entry, root: root, kind: kind))
+                    snapshot.files.append(StorageFile(entry: entry, root: root, kind: kind, modified: values.contentModificationDate, created: values.creationDate, added: values.addedToDirectoryDate))
                     snapshot.totals[kind, default: 0] += size
                     snapshot.counts[kind, default: 0] += 1
                 } catch is CancellationError { throw CancellationError() }

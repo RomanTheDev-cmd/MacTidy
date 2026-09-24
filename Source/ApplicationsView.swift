@@ -17,6 +17,7 @@ import AppKit
     @Published var showNotes = false
     @Published var confirm = false
     @Published var running: Set<String> = []
+    @Published var unavailable: Set<String> = []
     var worker: Task<ApplicationScan, Error>?
     var generation = UUID()
     var roots: [URL] { [URL(fileURLWithPath: "/Applications"), FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Applications")] }
@@ -35,7 +36,8 @@ import AppKit
     var hiddenCount: Int { selected.subtracting(Set(visible.map(\.id))).count }
     func refreshRunning() {
         running = Set(NSWorkspace.shared.runningApplications.compactMap { $0.bundleURL.map { Scanner.canonical($0).path } })
-        selected.subtract(running)
+        unavailable = Set(apps.filter { !ApplicationScanner.canMoveToTrash($0) }.map(\.id))
+        selected.subtract(running.union(unavailable))
     }
     func cancel() { worker?.cancel(); worker = nil; generation = UUID(); busy = false; status = L("s008") }
     func scan() {
@@ -180,7 +182,7 @@ struct ApplicationsView: View {
                     Spacer()
                     Button(L("s027")) {
                         m.refreshRunning()
-                        m.selected.formUnion(m.visible.filter { !m.running.contains($0.id) }.map(\.id))
+                        m.selected.formUnion(m.visible.filter { !m.running.contains($0.id) && !m.unavailable.contains($0.id) }.map(\.id))
                     }.disabled(m.visible.isEmpty || m.cleaning)
                     if !m.selected.isEmpty {
                         Button(L("s028")) { m.selected = [] }.disabled(m.cleaning)
@@ -228,7 +230,7 @@ struct ApplicationsView: View {
     }
     private func appRow(_ app: InstalledApplication) -> some View {
         HStack(spacing: 12) {
-            Toggle(L("s044" , app.name), isOn: Binding(get: { m.selected.contains(app.id) }, set: { if $0 { m.selected.insert(app.id) } else { m.selected.remove(app.id) } })).labelsHidden().toggleStyle(.checkbox).disabled(m.running.contains(app.id) || m.cleaning)
+            Toggle(L("s044" , app.name), isOn: Binding(get: { m.selected.contains(app.id) }, set: { if $0 { m.selected.insert(app.id) } else { m.selected.remove(app.id) } })).labelsHidden().toggleStyle(.checkbox).disabled(m.running.contains(app.id) || m.unavailable.contains(app.id) || m.cleaning)
             Image(nsImage: NSWorkspace.shared.icon(forFile: app.url.path)).resizable().frame(width: 36, height: 36)
             VStack(alignment: .leading, spacing: 4) {
                 Text(app.name).font(.system(size: 13, weight: .medium)).lineLimit(1)
@@ -238,6 +240,7 @@ struct ApplicationsView: View {
             VStack(alignment: .trailing, spacing: 4) {
                 Text(bytes(app.entry.size)).font(.system(size: 12, weight: .semibold))
                 if m.running.contains(app.id) { Text(L("s047")).font(.caption2).foregroundStyle(.secondary) }
+                else if m.unavailable.contains(app.id) { Text(L("s196")).font(.caption2).foregroundStyle(.secondary) }
             }
         }.padding(10).contentShape(Rectangle()).background(m.focused == app.id ? Color.primary.opacity(0.09) : .clear, in: RoundedRectangle(cornerRadius: 10))
             .onTapGesture { m.focused = app.id }
