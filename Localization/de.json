@@ -148,5 +148,13 @@
   "s147": "macOS konnte den Zeitplan nicht aktivieren (Code {0}).",
   "s148": "Noch keine automatischen Läufe.",
   "s149": "{0}: in den Papierkorb verschoben — {1}, Fehler — {2}.",
-  "s150": "Das Ergebnis konnte nicht gespeichert werden: {0}"
+  "s150": "Das Ergebnis konnte nicht gespeichert werden: {0}",
+  "s151": "Suche nach Updates…",
+  "s152": "Version {0} ist verfügbar",
+  "s153": "Update wird geladen…",
+  "s154": "Installationsprogramm öffnen",
+  "s155": "Das Installationsprogramm ist geöffnet. Schließen Sie das Update mit den macOS-Schritten ab.",
+  "s156": "MacTidy ist auf dem neuesten Stand.",
+  "s157": "Nach Updates suchen",
+  "s158": "Update fehlgeschlagen: {0}"
 }

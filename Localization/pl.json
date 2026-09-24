@@ -148,5 +148,13 @@
   "s147": "macOS nie mógł włączyć harmonogramu (kod {0}).",
   "s148": "Nie ma jeszcze automatycznych biegów.",
   "s149": "{0}: przeniesiono do Kosza — {1}, błędy — {2}.",
-  "s150": "Nie można zapisać wyniku: {0}"
+  "s150": "Nie można zapisać wyniku: {0}",
+  "s151": "Sprawdzanie aktualizacji…",
+  "s152": "Dostępna jest wersja {0}",
+  "s153": "Pobieranie aktualizacji…",
+  "s154": "Otwórz instalator",
+  "s155": "Instalator jest otwarty. Wykonaj kroki systemu macOS, aby dokończyć aktualizację.",
+  "s156": "MacTidy jest aktualny.",
+  "s157": "Sprawdź aktualizacje",
+  "s158": "Nie udało się zaktualizować: {0}"
 }

@@ -148,5 +148,13 @@
   "s147": "macOS could not enable the schedule (code {0}).",
   "s148": "No automatic runs yet.",
   "s149": "{0}: moved to Trash — {1}, errors — {2}.",
-  "s150": "Could not save the result: {0}"
+  "s150": "Could not save the result: {0}",
+  "s151": "Checking for updates…",
+  "s152": "Version {0} is available",
+  "s153": "Downloading update…",
+  "s154": "Open installer",
+  "s155": "Installer opened. Complete the macOS steps to finish updating.",
+  "s156": "MacTidy is up to date.",
+  "s157": "Check for updates",
+  "s158": "Could not update: {0}"
 }

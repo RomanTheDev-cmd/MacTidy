@@ -167,11 +167,13 @@ enum ResultSort: String, CaseIterable {
 struct ContentView: View {
     @StateObject private var m = Model()
     @StateObject private var ui = CleanupUIState()
+    @StateObject private var updater = UpdateModel()
     @Environment(\.openWindow) private var openWindow
 
     var body: some View {
         VStack(spacing: 22) {
             header
+            if updater.available != nil { updateBanner }
             if !m.hasScanned && !m.busy { welcome }
             else { review }
         }
@@ -185,6 +187,7 @@ struct ContentView: View {
         }
         .tint(.primary)
         .sheet(isPresented: $ui.showSettings) { settings }
+        .task { await updater.check(automatic: true) }
         .onReceive(NotificationCenter.default.publisher(for: .init("MacTidyLanguageUpdated"))) { _ in m.objectWillChange.send() }
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
             m.weeklyEnabled = WeeklySchedule.enabled; m.weeklyResult = WeeklySchedule.lastResult(); m.refreshDisk()
@@ -218,6 +221,21 @@ struct ContentView: View {
                 Image(systemName: "slider.horizontal.3").font(.system(size: 17)).frame(width: 30, height: 30)
             }.buttonStyle(.plain).help(L("s129")).accessibilityLabel(L("s129"))
         }
+    }
+
+    private var updateBanner: some View {
+        HStack(spacing: 12) {
+            Image(systemName: "arrow.down.circle").font(.title3)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(L("s152", updater.available?.version.description ?? "")).font(.subheadline.weight(.semibold))
+                if let message = updater.message { Text(message).font(.caption).foregroundStyle(.secondary).lineLimit(2) }
+            }
+            Spacer()
+            if updater.busy { ProgressView().controlSize(.small) }
+            else {
+                Button(L("s154")) { Task { await updater.install() } }.primaryControl()
+            }
+        }.padding(15).glassPanel(radius: 17)
     }
 
     private var diskSummary: some View {
@@ -366,24 +384,34 @@ struct ContentView: View {
                     .font(.caption).foregroundStyle(.secondary).lineLimit(1)
             }
             Spacer()
-            if !m.visible.isEmpty {
-                Menu {
-                    Button(L("s121")) { m.selected.formUnion(m.visible.map(\.id)) }
-                    Button(L("s028")) { m.selected = [] }.disabled(m.selected.isEmpty)
-                    if !m.notes.isEmpty {
-                        Divider()
-                        Button(L("s036", m.notes.count)) { m.showNotes = true }
-                    }
-                } label: { Image(systemName: "ellipsis") }
-                    .menuStyle(.borderlessButton).fixedSize().help(L("s136"))
+            if !m.notes.isEmpty {
+                Button { m.showNotes = true } label: {
+                    Label(L("s036", m.notes.count), systemImage: "exclamationmark.circle")
+                }.font(.caption)
+            }
+            Button(L("s121")) { m.selected.formUnion(m.visible.map(\.id)) }
+                .disabled(m.visible.isEmpty || m.busy || m.cleaning)
+            if !m.selected.isEmpty {
+                Button(L("s028")) { m.selected = [] }.disabled(m.cleaning)
             }
             Button { m.confirm = true } label: { Label(L("s037"), systemImage: "trash") }
                 .primaryControl().disabled(m.selected.isEmpty || m.busy || m.cleaning)
         }
         .padding(17).glassPanel(radius: 18)
         .sheet(isPresented: $m.showNotes) {
-            ScrollView { Text(m.notes.joined(separator: "\n")).textSelection(.enabled).padding(24) }
-                .frame(width: 480, height: 300)
+            VStack(alignment: .leading, spacing: 16) {
+                HStack {
+                    Text(L("s036", m.notes.count)).font(.headline)
+                    Spacer()
+                    Button(L("s043")) { m.showNotes = false }.keyboardShortcut(.escape)
+                }
+                Divider()
+                ScrollView {
+                    Text(m.notes.joined(separator: "\n"))
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .textSelection(.enabled)
+                }
+            }.padding(24).frame(width: 520, height: min(420, CGFloat(130 + m.notes.count * 36)))
         }
     }
 
@@ -422,6 +450,20 @@ struct ContentView: View {
                         Text(L("s134")).tag(Int64(1_000_000_000))
                     }
                 }.padding(18).glassPanel(radius: 18).disabled(m.busy || m.cleaning)
+                VStack(alignment: .leading, spacing: 10) {
+                    HStack {
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text("MacTidy " + (Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? ""))
+                                .font(.headline)
+                            if let message = updater.message {
+                                Text(message).font(.caption).foregroundStyle(.secondary)
+                            }
+                        }
+                        Spacer()
+                        if updater.busy { ProgressView().controlSize(.small) }
+                        Button(L("s157")) { Task { await updater.check() } }.disabled(updater.busy)
+                    }
+                }.padding(18).glassPanel(radius: 18)
                 VStack(alignment: .leading, spacing: 10) {
                     Toggle(L("s138"), isOn: Binding(
                         get: { m.weeklyEnabled },

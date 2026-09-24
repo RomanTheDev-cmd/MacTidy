@@ -148,5 +148,13 @@
   "s147": "macOS non ha potuto abilitare la pianificazione (codice {0}).",
   "s148": "Nessuna corsa automatica ancora.",
   "s149": "{0}: spostato nel Cestino — {1}, errori — {2}.",
-  "s150": "Impossibile salvare il risultato: {0}"
+  "s150": "Impossibile salvare il risultato: {0}",
+  "s151": "Verifica degli aggiornamenti…",
+  "s152": "La versione {0} è disponibile",
+  "s153": "Download dell’aggiornamento…",
+  "s154": "Apri il programma di installazione",
+  "s155": "Il programma di installazione è aperto. Segui i passaggi di macOS per completare l’aggiornamento.",
+  "s156": "MacTidy è aggiornato.",
+  "s157": "Verifica aggiornamenti",
+  "s158": "Impossibile aggiornare: {0}"
 }

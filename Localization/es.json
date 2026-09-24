@@ -148,5 +148,13 @@
   "s147": "macOS no pudo habilitar el horario (código {0}).",
   "s148": "Todavía no hay carreras automáticas.",
   "s149": "{0}: movido a la papelera — {1}, errores — {2}.",
-  "s150": "No se pudo guardar el resultado: {0}"
+  "s150": "No se pudo guardar el resultado: {0}",
+  "s151": "Buscando actualizaciones…",
+  "s152": "La versión {0} está disponible",
+  "s153": "Descargando la actualización…",
+  "s154": "Abrir instalador",
+  "s155": "El instalador está abierto. Sigue los pasos de macOS para completar la actualización.",
+  "s156": "MacTidy está actualizado.",
+  "s157": "Buscar actualizaciones",
+  "s158": "No se pudo actualizar: {0}"
 }

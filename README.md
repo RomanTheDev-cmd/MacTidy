@@ -6,7 +6,7 @@ A native macOS app for finding large files, reviewing clutter, and moving select
 
 ## Install
 
-1. Download **MacTidy-2.2.0-arm64.pkg** from [Releases](https://github.com/RomanTheDev-cmd/MacTidy/releases/latest).
+1. Download **MacTidy-2.3.0-arm64.pkg** from [Releases](https://github.com/RomanTheDev-cmd/MacTidy/releases/latest).
 2. Double-click the installer and follow the standard macOS installation steps.
 3. Open **MacTidy** in **Applications**.
 
@@ -24,6 +24,12 @@ The prebuilt installer requires **Apple Silicon (M1 or newer) and macOS 13+**. T
 - Uses native glass on macOS 26+, standard materials on earlier versions, and the system appearance. The monochrome icon has a transparent background.
 
 Cleanup always needs judgment: old or large files can still be valuable. Close relevant apps before clearing caches and close Xcode before clearing DerivedData. Disk space figures are estimates; APFS sharing, snapshots and cloud files affect actual reclaimed space.
+
+## Updates
+
+MacTidy checks the latest GitHub release when its main window opens. If a newer version is available, it downloads the matching Apple Silicon installer, checks GitHub's SHA-256 digest and verifies the release's Ed25519 signature against the public key built into the app. It then opens the macOS Installer once for that version. Complete the normal Installer steps, including administrator authorization if requested. The app cannot silently bypass macOS installation approval. If you defer the installation, use **Settings → Check for updates → Open installer** later.
+
+Only releases with a matching signed `.pkg` are offered. The update check contacts GitHub; it does not send scanned file names or contents. Official release packages include a detached `.pkg.sig` file. `package.command` can produce the same signature for a release maintainer when `MACTIDY_SIGNING_KEY` points to the private key matching `UpdateVerifier.officialPublicKey`; keep that private key outside the repository. Locally built packages without this signature can still be installed manually, but the in-app updater will reject them.
 
 ## Languages and privacy
 

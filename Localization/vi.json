@@ -148,5 +148,13 @@
   "s147": "macOS không thể bật lịch trình (mã {0}).",
   "s148": "Chưa chạy tự động.",
   "s149": "{0}: đã chuyển đến Thùng rác — {1}, lỗi — {2}.",
-  "s150": "Không thể lưu kết quả: {0}"
+  "s150": "Không thể lưu kết quả: {0}",
+  "s151": "Đang kiểm tra bản cập nhật…",
+  "s152": "Đã có phiên bản {0}",
+  "s153": "Đang tải bản cập nhật…",
+  "s154": "Mở trình cài đặt",
+  "s155": "Trình cài đặt đã mở. Hoàn tất các bước của macOS để cập nhật.",
+  "s156": "MacTidy đã được cập nhật.",
+  "s157": "Kiểm tra bản cập nhật",
+  "s158": "Không thể cập nhật: {0}"
 }

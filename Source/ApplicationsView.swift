@@ -178,18 +178,18 @@ struct ApplicationsView: View {
                             .font(.caption).foregroundStyle(.secondary).lineLimit(1)
                     }
                     Spacer()
-                    Menu {
-                        Button(L("s027")) {
-                            m.refreshRunning()
-                            m.selected.formUnion(m.visible.filter { !m.running.contains($0.id) }.map(\.id))
-                        }.disabled(m.visible.isEmpty || m.cleaning)
-                        Button(L("s028")) { m.selected = [] }.disabled(m.selected.isEmpty || m.cleaning)
-                        if !m.notes.isEmpty {
-                            Divider()
-                            Button(L("s036", m.notes.count)) { m.showNotes = true }
-                        }
-                    } label: { Image(systemName: "ellipsis") }
-                        .menuStyle(.borderlessButton).fixedSize()
+                    Button(L("s027")) {
+                        m.refreshRunning()
+                        m.selected.formUnion(m.visible.filter { !m.running.contains($0.id) }.map(\.id))
+                    }.disabled(m.visible.isEmpty || m.cleaning)
+                    if !m.selected.isEmpty {
+                        Button(L("s028")) { m.selected = [] }.disabled(m.cleaning)
+                    }
+                    if !m.notes.isEmpty {
+                        Button { m.showNotes = true } label: {
+                            Label(L("s036", m.notes.count), systemImage: "exclamationmark.circle")
+                        }.font(.caption)
+                    }
                     Button(L("s037"), systemImage: "trash") { m.confirm = true }
                         .primaryControl().disabled(m.selected.isEmpty || m.busy || m.cleaning)
                 }.padding(17).glassPanel(radius: 18)
@@ -198,8 +198,19 @@ struct ApplicationsView: View {
         .padding(28).frame(minWidth: 760, minHeight: 620)
         .background(Color(nsColor: .windowBackgroundColor)).tint(.primary)
         .sheet(isPresented: $m.showNotes) {
-            ScrollView { Text(m.notes.joined(separator: "\n")).textSelection(.enabled).padding(24) }
-                .frame(width: 480, height: 300)
+            VStack(alignment: .leading, spacing: 16) {
+                HStack {
+                    Text(L("s036", m.notes.count)).font(.headline)
+                    Spacer()
+                    Button(L("s043")) { m.showNotes = false }.keyboardShortcut(.escape)
+                }
+                Divider()
+                ScrollView {
+                    Text(m.notes.joined(separator: "\n"))
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .textSelection(.enabled)
+                }
+            }.padding(24).frame(width: 520, height: min(420, CGFloat(130 + m.notes.count * 36)))
         }
         .onReceive(NotificationCenter.default.publisher(for: .init("MacTidyLanguageUpdated"))) { _ in m.objectWillChange.send() }
         .onAppear { m.refreshRunning() }

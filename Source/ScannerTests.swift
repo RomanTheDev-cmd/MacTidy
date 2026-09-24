@@ -1,4 +1,5 @@
 import Foundation
+import CryptoKit
 func blockOn(_ gate: DispatchSemaphore) { gate.wait() }
 
 @main struct Tests {
@@ -15,11 +16,29 @@ func blockOn(_ gate: DispatchSemaphore) { gate.wait() }
         check(AppLocalization.format("{1} / {0}", ["literal {1}", "second"]) == "second / literal {1}", "translation placeholders cannot expand argument content")
         let catalogs = URL(fileURLWithPath: ProcessInfo.processInfo.environment["MACTIDY_LOCALIZATION_DIR"]!)
         let english = AppLocalization.shared.english
-        check(english.count == 150, "English fallback is complete")
+        check(english.count == 158, "English fallback is complete")
         for url in try FileManager.default.contentsOfDirectory(at: catalogs, includingPropertiesForKeys: nil) where url.pathExtension == "json" {
             let catalog = try JSONDecoder().decode([String: String].self, from: Data(contentsOf: url))
             check(Set(catalog.keys) == Set(english.keys) && english.allSatisfy { AppLocalization.tokens($0.value) == AppLocalization.tokens(catalog[$0.key] ?? "") }, "catalog keys and placeholders: " + url.lastPathComponent)
         }
+        check(AppVersion("v2.3.0")! > AppVersion("2.2.9")!, "semantic update version comparison")
+        check(AppVersion("2.3.0-beta") == nil && AppVersion("2.3") == nil, "prerelease and malformed versions rejected")
+        let key = Curve25519.Signing.PrivateKey()
+        let package = Data("test package".utf8)
+        let signature = try key.signature(for: package)
+        check(UpdateVerifier.verify(package: package, signature: signature, publicKey: key.publicKey.rawRepresentation), "valid update signature")
+        check(!UpdateVerifier.verify(package: Data("tampered".utf8), signature: signature, publicKey: key.publicKey.rawRepresentation), "changed package rejected")
+        func asset(_ name: String, _ size: Int) -> [String: Any] {
+            ["name": name, "size": size, "digest": "sha256:" + String(repeating: "a", count: 64),
+             "browser_download_url": "https://github.com/RomanTheDev-cmd/MacTidy/releases/download/v2.4.0/" + name]
+        }
+        let release: [String: Any] = ["tag_name": "v2.4.0", "draft": false, "prerelease": false,
+                                       "assets": [asset("MacTidy-2.4.0-arm64.pkg", 2_000_000), asset("MacTidy-2.4.0-arm64.pkg.sig", 64)]]
+        let releaseData = try JSONSerialization.data(withJSONObject: release)
+        check(try AvailableUpdate.parse(releaseData, current: AppVersion("2.3.0")!)?.version == AppVersion("2.4.0"), "signed update selected")
+        check(try AvailableUpdate.parse(releaseData, current: AppVersion("2.4.0")!) == nil, "current release is not reinstalled")
+        var unsigned = release; unsigned["assets"] = [asset("MacTidy-2.4.0-arm64.pkg", 2_000_000)]
+        rejects("unsigned release rejected") { _ = try AvailableUpdate.parse(JSONSerialization.data(withJSONObject: unsigned), current: AppVersion("2.3.0")!) }
         let fm = FileManager.default
         let rawRoot = fm.temporaryDirectory.appendingPathComponent("MacTidy-tests-" + UUID().uuidString)
         try fm.createDirectory(at: rawRoot, withIntermediateDirectories: true)

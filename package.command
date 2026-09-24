@@ -26,3 +26,7 @@ cat > "$staging/Distribution.xml" <<XML
 XML
 /usr/bin/productbuild --distribution "$staging/Distribution.xml" --package-path "$staging" "dist/MacTidy-$version-$arch.pkg"
 (cd dist && /usr/bin/shasum -a 256 "MacTidy-$version-$arch.pkg" > "MacTidy-$version-$arch.pkg.sha256")
+
+if [[ -n "${MACTIDY_SIGNING_KEY:-}" ]]; then
+    swift Tools/sign-release.swift "$MACTIDY_SIGNING_KEY" "dist/MacTidy-$version-$arch.pkg" "dist/MacTidy-$version-$arch.pkg.sig"
+fi

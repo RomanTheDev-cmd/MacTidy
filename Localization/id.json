@@ -148,5 +148,13 @@
   "s147": "macOS tidak dapat mengaktifkan jadwal (kode {0}).",
   "s148": "Belum ada lari otomatis.",
   "s149": "{0}: dipindahkan ke Tong Sampah — {1}, kesalahan — {2}.",
-  "s150": "Tidak dapat menyimpan hasilnya: {0}"
+  "s150": "Tidak dapat menyimpan hasilnya: {0}",
+  "s151": "Memeriksa pembaruan…",
+  "s152": "Versi {0} tersedia",
+  "s153": "Mengunduh pembaruan…",
+  "s154": "Buka penginstal",
+  "s155": "Penginstal telah terbuka. Ikuti langkah macOS untuk menyelesaikan pembaruan.",
+  "s156": "MacTidy sudah versi terbaru.",
+  "s157": "Periksa pembaruan",
+  "s158": "Tidak dapat memperbarui: {0}"
 }

@@ -4,6 +4,7 @@ final class AppLocalization {
     static let shared = AppLocalization()
     private let lock = NSLock()
     private var strings: [String: String] = [:]
+    private var cacheLoaded = false
     let english: [String: String]
     let language: String
     let bundled: Bool
@@ -26,12 +27,12 @@ final class AppLocalization {
         let catalog = read(language)
         bundled = catalog != nil
         strings = catalog ?? english
-        if !bundled, let data = try? Data(contentsOf: cacheURL), let cached = try? JSONDecoder().decode([String: String].self, from: data), Set(cached.keys) == Set(english.keys) { strings = cached }
+        if !bundled, let data = try? Data(contentsOf: cacheURL), let cached = try? JSONDecoder().decode([String: String].self, from: data), Set(cached.keys) == Set(english.keys) { strings = cached; cacheLoaded = true }
     }
     var cacheURL: URL {
         FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Application Support/MacTidy/Translations/2.1-\(language).json")
     }
-    var needsTranslation: Bool { !bundled && !FileManager.default.fileExists(atPath: cacheURL.path) }
+    var needsTranslation: Bool { !bundled && !cacheLoaded }
     func install(_ catalog: [String: String]) throws {
         guard Set(catalog.keys) == Set(english.keys) else { return }
         var checked = catalog
@@ -39,7 +40,7 @@ final class AppLocalization {
         let data = try JSONEncoder().encode(checked)
         try FileManager.default.createDirectory(at: cacheURL.deletingLastPathComponent(), withIntermediateDirectories: true)
         try data.write(to: cacheURL, options: .atomic)
-        lock.lock(); strings = checked; lock.unlock()
+        lock.lock(); strings = checked; cacheLoaded = true; lock.unlock()
     }
     static func tokens(_ text: String) -> [String] {
         let regex = try! NSRegularExpression(pattern: "\\{[0-9]+\\}")

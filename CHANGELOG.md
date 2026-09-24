@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.3.0
+
+- Check GitHub Releases at startup and open the macOS Installer once when a newer signed version is available.
+- Verify GitHub SHA-256 digests and the release’s Ed25519 signature before opening the package.
+- Show “Select All” and “Deselect” directly beside the cleanup action. Give the skipped-items report a clear close button and a compact size.
+
 ## 2.2.0
 
 - Redesigned cleanup and applications windows around one primary action: scan, review, select, then move to Trash.
