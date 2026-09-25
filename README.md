@@ -6,7 +6,7 @@ A native macOS app for finding large files, reviewing clutter, and moving select
 
 ## Install
 
-1. Download **MacSpace-2.8.1-arm64.pkg** from [Releases](https://github.com/RomanTheDev-cmd/MacTidy/releases/latest).
+1. Download **MacSpace-2.8.2-arm64.pkg** from [Releases](https://github.com/RomanTheDev-cmd/MacTidy/releases/latest).
 2. Double-click the installer and follow the standard macOS installation steps.
 3. Open **MacSpace** in **Applications**.
 
@@ -29,7 +29,7 @@ The prebuilt installer requires **Apple Silicon (M1 or newer) and macOS 13+**. T
 - The Storage by Type window estimates space used by photos, videos, audio, documents, installers, archives, apps, and other files. Select any personal-file category, including Other Files, to review individual files and move only selected items to Trash. System and protected folders remain excluded. The Applications category suggests up to three apps not opened for 90 days and opens the dedicated app review. Available space includes an estimate of space macOS can reclaim automatically, matching System Settings; local snapshots and APFS sharing can make the immediate physical free space smaller.
 - **Free up space** accepts a target in GB and presents alternatives: installers and archives, old downloads, large personal files, or a combined selection. It also links to rarely used apps for separate review. Review each suggested file, change the selection, and confirm before anything moves to Trash. Estimates may fall short of the target.
 - Optionally moves **everything in Downloads, including new files, hidden files, and whole folders**, to Trash every Sunday at 12:00 local time. This requires explicit opt-in. Trash is never emptied.
-- Uses native glass on macOS 26+, standard materials on earlier versions, and the system appearance. The cool blue-silver icon has a transparent background.
+- Uses native glass on macOS 26+, standard materials on earlier versions, and the system appearance. The silver tile and blue brush icon has a transparent outer canvas.
 
 Cleanup always needs judgment: old or large files can still be valuable. Close relevant apps before clearing caches and close Xcode before clearing DerivedData. Disk space figures are estimates; APFS sharing, snapshots and cloud files affect actual reclaimed space.
 
