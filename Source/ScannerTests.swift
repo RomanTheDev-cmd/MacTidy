@@ -36,6 +36,9 @@ func blockOn(_ gate: DispatchSemaphore) { gate.wait() }
                                        "assets": [asset("MacTidy-2.4.0-arm64.pkg", 2_000_000), asset("MacTidy-2.4.0-arm64.pkg.sig", 64)]]
         let releaseData = try JSONSerialization.data(withJSONObject: release)
         check(try AvailableUpdate.parse(releaseData, current: AppVersion("2.3.0")!)?.version == AppVersion("2.4.0"), "signed update selected")
+        var renamed = release
+        renamed["assets"] = [asset("MacSpace-2.4.0-arm64.pkg", 2_000_000), asset("MacSpace-2.4.0-arm64.pkg.sig", 64)]
+        check(try AvailableUpdate.parse(JSONSerialization.data(withJSONObject: renamed), current: AppVersion("2.3.0")!)?.package.name == "MacSpace-2.4.0-arm64.pkg", "renamed signed update selected")
         check(try AvailableUpdate.parse(releaseData, current: AppVersion("2.4.0")!) == nil, "current release is not reinstalled")
         var unsigned = release; unsigned["assets"] = [asset("MacTidy-2.4.0-arm64.pkg", 2_000_000)]
         rejects("unsigned release rejected") { _ = try AvailableUpdate.parse(JSONSerialization.data(withJSONObject: unsigned), current: AppVersion("2.3.0")!) }

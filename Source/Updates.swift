@@ -58,8 +58,11 @@ struct AvailableUpdate {
               let version = AppVersion(release.tag_name),
               version > current else { return nil }
         guard release.tag_name == "v" + version.description else { throw UpdateError.invalidRelease }
-        let packageName = "MacTidy-\(version.description)-\(architecture).pkg"
-        guard let package = release.assets.first(where: { $0.name == packageName }),
+        let packageNames = ["MacSpace-\(version.description)-\(architecture).pkg", "MacTidy-\(version.description)-\(architecture).pkg"]
+        guard let packageName = packageNames.first(where: { name in
+                  release.assets.contains(where: { $0.name == name }) && release.assets.contains(where: { $0.name == name + ".sig" })
+              }),
+              let package = release.assets.first(where: { $0.name == packageName }),
               let signature = release.assets.first(where: { $0.name == packageName + ".sig" }),
               package.size > 100_000 && package.size < 150_000_000,
               signature.size == 64,
@@ -109,7 +112,7 @@ enum UpdateVerifier {
             var request = URLRequest(url: endpoint)
             request.timeoutInterval = 15
             request.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")
-            request.setValue("MacTidy-updater", forHTTPHeaderField: "User-Agent")
+            request.setValue("MacSpace-updater", forHTTPHeaderField: "User-Agent")
             let (data, response) = try await URLSession.shared.data(for: request)
             guard let http = response as? HTTPURLResponse, http.statusCode == 200, data.count < 2_000_000 else { throw UpdateError.badResponse }
             guard let current = AppVersion(Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "") else { throw UpdateError.invalidRelease }
@@ -162,7 +165,7 @@ enum UpdateVerifier {
         guard let url = asset.validatedURL(tag: tag), let hash = asset.expectedHash else { throw UpdateError.invalidRelease }
         var request = URLRequest(url: url)
         request.timeoutInterval = 60
-        request.setValue("MacTidy-updater", forHTTPHeaderField: "User-Agent")
+        request.setValue("MacSpace-updater", forHTTPHeaderField: "User-Agent")
         let (file, response) = try await URLSession.shared.download(for: request)
         guard let http = response as? HTTPURLResponse, http.statusCode == 200 else { throw UpdateError.badResponse }
         let data = try Data(contentsOf: file)

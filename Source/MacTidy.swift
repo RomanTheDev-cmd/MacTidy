@@ -50,7 +50,6 @@ enum ResultSort: String, CaseIterable {
     @Published var hasScanned = false
     @Published var completed: Set<CleanupCategory> = []
     @Published var currentCategory: CleanupCategory?
-    @Published var notes: [String] = []
     @Published var search = ""
     @Published var sort = ResultSort.size
     @Published var status = L("s089")
@@ -87,7 +86,7 @@ enum ResultSort: String, CaseIterable {
     func reset() {
         guard !cleaning else { return }
         cancel(); candidates = []; selected = []; focused = nil; completed = []; hasScanned = false
-        search = ""; category = nil; notes = []; error = nil; status = L("s090")
+        search = ""; category = nil; error = nil; status = L("s090")
     }
     func cancel() {
         guard !cleaning else { return }
@@ -120,7 +119,7 @@ enum ResultSort: String, CaseIterable {
             do {
                 let result = try await task.value
                 guard generation == token else { return }
-                candidates = result.candidates; notes = result.notes; completed = result.completed; hasScanned = true
+                candidates = result.candidates; completed = result.completed; hasScanned = true
                 status = L("s094" , candidates.count)
                 if result.unavailableChosenFolder { error = L("s002", displayPath(config.folder)) }
             } catch is CancellationError { if generation == token { status = L("s008") } }
@@ -160,12 +159,12 @@ enum ResultSort: String, CaseIterable {
 @MainActor final class CleanupUIState: ObservableObject {
     @Published var showSettings = false
     @Published var showPermissions = false
+    @Published var showCategories = false
 }
 struct ContentView: View {
     @StateObject private var m = Model()
     @StateObject private var ui = CleanupUIState()
     @StateObject private var updater = UpdateModel()
-    @State private var showCategories = false
     @Environment(\.openWindow) private var openWindow
 
     var body: some View {
@@ -219,7 +218,7 @@ struct ContentView: View {
                 .flatMap { NSImage(contentsOf: $0) } ?? NSWorkspace.shared.icon(forFile: Bundle.main.bundlePath))
                 .resizable().frame(width: 42, height: 42)
             VStack(alignment: .leading, spacing: 2) {
-                Text("MacTidy").font(.system(size: 23, weight: .semibold, design: .rounded))
+                Text("MacSpace").font(.system(size: 23, weight: .semibold, design: .rounded))
                 Text(L("s104")).font(.caption).foregroundStyle(.secondary)
             }
             Spacer()
@@ -398,8 +397,10 @@ struct ContentView: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text(m.selected.isEmpty ? L("s140") : L("s141", m.selected.count, bytes(m.pickedSize)))
                     .font(.subheadline.weight(.semibold))
-                Text(m.hiddenSelection > 0 ? L("s142", m.hiddenSelection) : m.status)
-                    .font(.caption).foregroundStyle(.secondary).lineLimit(1)
+                if m.hiddenSelection > 0 {
+                    Text(L("s142", m.hiddenSelection))
+                        .font(.caption).foregroundStyle(.secondary).lineLimit(1)
+                }
             }
             Spacer()
             Button(L("s121")) { m.selected.formUnion(m.visible.map(\.id)) }
@@ -429,7 +430,7 @@ struct ContentView: View {
                         Image(systemName: "xmark").frame(width: 22, height: 22)
                     }.buttonStyle(.plain).help(L("s197")).accessibilityLabel(L("s197")).keyboardShortcut(.escape)
                 }
-                DisclosureGroup(isExpanded: $showCategories) {
+                DisclosureGroup(isExpanded: $ui.showCategories) {
                     VStack(alignment: .leading, spacing: 13) {
                         ForEach(CleanupCategory.allCases) { category in
                             Toggle(isOn: Binding(
@@ -462,7 +463,7 @@ struct ContentView: View {
                 VStack(alignment: .leading, spacing: 10) {
                     HStack {
                         VStack(alignment: .leading, spacing: 3) {
-                            Text("MacTidy " + (Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? ""))
+                            Text("MacSpace " + (Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? ""))
                                 .font(.headline)
                             if let message = updater.message {
                                 Text(message).font(.caption).foregroundStyle(.secondary)
@@ -496,7 +497,7 @@ struct ContentView: View {
 @main struct MacTidy: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var delegate
     var body: some Scene {
-        Window("MacTidy", id: "main") { LocalizedRoot(translates: true) { ContentView() } }.windowStyle(.hiddenTitleBar).defaultSize(width: 920, height: 690)
+        Window("MacSpace", id: "main") { LocalizedRoot(translates: true) { ContentView() } }.windowStyle(.hiddenTitleBar).defaultSize(width: 920, height: 690)
         Window(L("s164"), id: "storage") { LocalizedRoot(translates: false) { StorageView() } }.windowStyle(.hiddenTitleBar).defaultSize(width: 1000, height: 730)
         Window(L("s143"), id: "applications") { LocalizedRoot(translates: false) { ApplicationsView() } }.windowStyle(.hiddenTitleBar).defaultSize(width: 920, height: 690)
     }

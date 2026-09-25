@@ -138,7 +138,7 @@ enum DiskAudit {
                 guard let size = row.bytes, size >= 100_000_000,
                       !row.url.lastPathComponent.hasPrefix("."),
                       !row.url.lastPathComponent.hasPrefix("com.apple."),
-                      row.url.lastPathComponent != "MacTidy",
+                      !(["MacTidy", "MacSpace"].contains(row.url.lastPathComponent)),
                       !reserved.contains(row.url.lastPathComponent),
                       FileManager.default.isDeletableFile(atPath: row.url.path),
                       (try? row.url.resourceValues(forKeys: [.isDirectoryKey, .isSymbolicLinkKey]))?.isDirectory == true,
@@ -169,7 +169,7 @@ enum DiskAudit {
               (opportunity.kind == .sharedAppData && sharedVendor),
               let stamp = opportunity.stamp,
               Scanner.canonical(item).path == item.path,
-              !name.hasPrefix("."), !name.hasPrefix("com.apple."), name != "MacTidy",
+              !name.hasPrefix("."), !name.hasPrefix("com.apple."), !(["MacTidy", "MacSpace"].contains(name)),
               FileManager.default.isDeletableFile(atPath: item.path),
               FileManager.default.isWritableFile(atPath: root.path) else {
             throw CleanerError(message: L("s081"))

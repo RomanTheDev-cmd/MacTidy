@@ -68,7 +68,7 @@ struct WeeklySchedule {
         let code = try launchctl(["bootstrap", domain, agent.path])
         guard code == 0 else {
             try? fm.removeItem(at: agent)
-            throw CleanerError(message: L("s147" , code))
+            throw CleanerError(message: L("s147"))
         }
     }
     static func configuration(helper: URL) -> [String: Any] {
@@ -86,6 +86,6 @@ struct WeeklySchedule {
         guard let data = try? Data(contentsOf: reportURL), let r = try? JSONDecoder().decode(WeeklyReport.self, from: data) else { return L("s148") }
         let f = DateFormatter(); f.locale = .current; f.dateStyle = .short; f.timeStyle = .short
         let summary = L("s149" , f.string(from: r.date), r.moved, r.failures.count)
-        return r.failures.isEmpty ? summary : summary + " " + r.failures.prefix(2).joined(separator: " ")
+        return summary
     }
 }

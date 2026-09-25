@@ -1,5 +1,11 @@
 # Changelog
 
+## 2.8.1
+
+- Rename the app and installer to MacSpace, preserving the bundle identity, preferences, and weekly schedule; the installer keeps a hidden compatibility link for existing Dock shortcuts.
+- Simplify visible status messages and keep raw weekly-cleanup errors out of the interface.
+- Keep a compatibility installer asset so older MacTidy versions can update to MacSpace.
+
 ## 2.8.0
 
 - Simplify navigation: a clear storage action, a compact More menu, and scan settings that reveal categories only when needed.

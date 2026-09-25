@@ -5,7 +5,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
 	<key>CFBundleExecutable</key>
-	<string>MacTidy</string>
+	<string>MacSpace</string>
 	<key>CFBundleIconFile</key>
 	<string>MacTidyBlueSilver</string>
 	<key>CFBundleIdentifier</key>
@@ -22,21 +22,23 @@
 		<string>es</string>
 	</array>
 	<key>CFBundleName</key>
-	<string>MacTidy</string>
+	<string>MacSpace</string>
+	<key>CFBundleDisplayName</key>
+	<string>MacSpace</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
-	<string>2.8.0</string>
+	<string>2.8.1</string>
 	<key>CFBundleVersion</key>
-	<string>14</string>
+	<string>15</string>
 	<key>LSMinimumSystemVersion</key>
 	<string>13.0</string>
 	<key>NSDesktopFolderUsageDescription</key>
-	<string>MacTidy needs access to scan the folders you select and move selected files to Trash.</string>
+	<string>MacSpace needs access to scan the folders you select and move selected files to Trash.</string>
 	<key>NSDocumentsFolderUsageDescription</key>
-	<string>MacTidy needs access to scan the folders you select and move selected files to Trash.</string>
+	<string>MacSpace needs access to scan the folders you select and move selected files to Trash.</string>
 	<key>NSDownloadsFolderUsageDescription</key>
-	<string>MacTidy needs access to scan the folders you select and move selected files to Trash.</string>
+	<string>MacSpace needs access to scan the folders you select and move selected files to Trash.</string>
 	<key>NSHighResolutionCapable</key>
 	<true/>
 </dict>

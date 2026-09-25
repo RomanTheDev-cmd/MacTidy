@@ -7,7 +7,11 @@
 	<key>CFBundleIdentifier</key>
 	<string>local.mactidy.helper</string>
 	<key>CFBundleName</key>
-	<string>MacTidy Helper</string>
+	<string>MacTidyHelper</string>
+	<key>CFBundleDisplayName</key>
+	<string>MacTidyHelper</string>
+	<key>LSHasLocalizedDisplayName</key>
+	<true/>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleVersion</key>

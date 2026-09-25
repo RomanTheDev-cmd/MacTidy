@@ -13,7 +13,6 @@ import AppKit
     @Published var search = ""
     @Published var status = L("s007")
     @Published var error: String?
-    @Published var notes: [String] = []
     @Published var confirm = false
     @Published var running: Set<String> = []
     @Published var unavailable: Set<String> = []
@@ -40,7 +39,7 @@ import AppKit
     }
     func cancel() { worker?.cancel(); worker = nil; generation = UUID(); busy = false; status = L("s008") }
     func scan() {
-        guard !cleaning else { return }; cancel(); busy = true; hasScanned = false; apps = []; selected = []; focused = nil; notes = []; error = nil
+        guard !cleaning else { return }; cancel(); busy = true; hasScanned = false; apps = []; selected = []; focused = nil; error = nil
         refreshRunning(); status = L("s009")
         let token = UUID(); generation = token; let roots = roots; let bundle = Bundle.main.bundleIdentifier
         let task = Task.detached(priority: .userInitiated) { [self] in
@@ -54,7 +53,7 @@ import AppKit
         Task {
             do {
                 let result = try await task.value; guard generation == token else { return }
-                apps = result.apps; notes = result.notes; hasScanned = true
+                apps = result.apps; hasScanned = true
                 status = L("s011" , apps.count, apps.filter { $0.lastUsed == nil }.count)
             } catch is CancellationError { }
               catch { if generation == token { self.error = error.localizedDescription } }
@@ -175,8 +174,10 @@ struct ApplicationsView: View {
                 HStack(spacing: 12) {
                     VStack(alignment: .leading, spacing: 4) {
                         Text(L("s034", m.selected.count, bytes(m.pickedSize))).font(.subheadline.weight(.semibold))
-                        Text(m.hiddenCount > 0 ? L("s035", m.hiddenCount) : m.status)
-                            .font(.caption).foregroundStyle(.secondary).lineLimit(1)
+                        if m.hiddenCount > 0 {
+                            Text(L("s035", m.hiddenCount))
+                                .font(.caption).foregroundStyle(.secondary).lineLimit(1)
+                        }
                     }
                     Spacer()
                     Button(L("s027")) {

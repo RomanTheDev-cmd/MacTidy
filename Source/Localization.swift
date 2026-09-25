@@ -30,7 +30,7 @@ final class AppLocalization {
         if !bundled, let data = try? Data(contentsOf: cacheURL), let cached = try? JSONDecoder().decode([String: String].self, from: data), Set(cached.keys) == Set(english.keys) { strings = cached; cacheLoaded = true }
     }
     var cacheURL: URL {
-        FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Application Support/MacTidy/Translations/2.1-\(language).json")
+        FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Application Support/MacTidy/Translations/2.8.1-\(language).json")
     }
     var needsTranslation: Bool { !bundled && !cacheLoaded }
     func install(_ catalog: [String: String]) throws {
