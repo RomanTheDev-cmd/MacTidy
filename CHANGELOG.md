@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.8.2
+
+- Use the same light silver tile and compact blue brush icon in Finder and in the Dock, both while MacSpace is open and while it is closed.
+
 ## 2.8.1
 
 - Rename the app and installer to MacSpace, preserving the bundle identity, preferences, and weekly schedule; the installer keeps a hidden compatibility link for existing Dock shortcuts.

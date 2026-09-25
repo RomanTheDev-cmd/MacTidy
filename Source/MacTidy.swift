@@ -214,7 +214,7 @@ struct ContentView: View {
 
     private var header: some View {
         HStack(spacing: 12) {
-            Image(nsImage: Bundle.main.url(forResource: "MacTidyBlueSilver", withExtension: "icns")
+            Image(nsImage: Bundle.main.url(forResource: "MacSpaceIcon", withExtension: "icns")
                 .flatMap { NSImage(contentsOf: $0) } ?? NSWorkspace.shared.icon(forFile: Bundle.main.bundlePath))
                 .resizable().frame(width: 42, height: 42)
             VStack(alignment: .leading, spacing: 2) {
@@ -489,7 +489,7 @@ struct ContentView: View {
 #if !TESTING
 @MainActor final class AppDelegate: NSObject, NSApplicationDelegate {
     func applicationDidFinishLaunching(_ notification: Notification) {
-        if let url = Bundle.main.url(forResource: "MacTidyBlueSilver", withExtension: "icns"), let icon = NSImage(contentsOf: url) {
+        if let url = Bundle.main.url(forResource: "MacSpaceIcon", withExtension: "icns"), let icon = NSImage(contentsOf: url) {
             NSApplication.shared.applicationIconImage = icon
         }
     }

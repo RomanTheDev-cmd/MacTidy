@@ -1,5 +1,6 @@
 .DS_Store
 *.app/
+*.iconset/
 dist/
 *.zip
 *.dmg
