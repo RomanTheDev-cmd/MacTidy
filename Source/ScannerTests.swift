@@ -14,9 +14,47 @@ func blockOn(_ gate: DispatchSemaphore) { gate.wait() }
         check(AppLocalization.base("en-US") == "en", "regional language resolution")
         check(AppLocalization.base("zh-TW") == "zh-Hant", "traditional Chinese resolution")
         check(AppLocalization.format("{1} / {0}", ["literal {1}", "second"]) == "second / literal {1}", "translation placeholders cannot expand argument content")
+        let definitions = ["main.cvd", "daily.cld", "bytecode.cvd"].map { URL(fileURLWithPath: "/tmp/" + $0) }
+        check(AntivirusEngine.hasCompleteDefinitions(definitions), "complete official antivirus database is ready")
+        check(!AntivirusEngine.hasCompleteDefinitions(Array(definitions.dropLast())), "partial antivirus database is not ready")
+        check(AntivirusScanLine.parse("/tmp/clean.txt: OK")?.signature == nil, "clean antivirus line advances progress")
+        check(AntivirusScanLine.parse("/tmp/name:part.txt: Test.Signature FOUND")?.path == "/tmp/name:part.txt" &&
+              AntivirusScanLine.parse("/tmp/name:part.txt: Test.Signature FOUND")?.signature == "Test.Signature",
+              "antivirus finding preserves paths containing colons")
+        check(AntivirusScanLine.parse("LibClamAV warning") == nil, "antivirus warnings do not count as files")
+        check(AntivirusScanLine.isSkippedLocation("/private/var/root: Can't open directory.") &&
+              AntivirusScanLine.isSkippedLocation("/tmp/locked.txt: Access denied ERROR") &&
+              !AntivirusScanLine.isSkippedLocation("/tmp/clean.txt: OK"), "inaccessible antivirus locations are counted as skipped")
+        check(AntivirusScanResult.isCompleted(status: 2, scannedFiles: 10) &&
+              !AntivirusScanResult.isCompleted(status: 2, scannedFiles: 0) &&
+              AntivirusScanResult.isCompleted(status: 1, scannedFiles: 0), "skipped locations do not mark a whole-disk scan as partial")
+        let driveRoot = FileManager.default.temporaryDirectory.appendingPathComponent("MacSpaceDrive-\(UUID().uuidString)")
+        try? FileManager.default.createDirectory(at: driveRoot, withIntermediateDirectories: true)
+        try? Data().write(to: driveRoot.appendingPathComponent("photo.jpg"))
+        check(!AntivirusEngine.isTimeMachineDrive(driveRoot), "ordinary flash drive is scanned")
+        try? FileManager.default.createDirectory(at: driveRoot.appendingPathComponent("2026-10-11-120000.backup"), withIntermediateDirectories: true)
+        check(AntivirusEngine.isTimeMachineDrive(driveRoot), "Time Machine backup drive is not scanned")
+        try? FileManager.default.removeItem(at: driveRoot)
+        check(AntivirusEngine.externalDrives().allSatisfy { $0.path.hasPrefix("/Volumes/") }, "startup disk is not listed as an external drive")
+        check(AntivirusScanProgress.estimatedSecondsRemaining(scanned: 100, total: 200, elapsed: 30) == 30 &&
+              AntivirusScanProgress.estimatedSecondsRemaining(scanned: 0, total: 200, elapsed: 30) == nil,
+              "remaining scan time is estimated only after measurable progress")
+        let sampleScan = AntivirusScanRecord(id: UUID(), startedAt: Date(), finishedAt: Date(), scannedFiles: 42,
+                                             outcome: .finished, findings: [AntivirusHistoryFinding(path: "/tmp/sample", signature: "Test")])
+        let decodedScan = try JSONDecoder().decode(AntivirusScanRecord.self, from: JSONEncoder().encode(sampleScan))
+        check(decodedScan.scannedFiles == 42 && decodedScan.findings.first?.signature == "Test", "scan history preserves results")
+        let scanControl = AntivirusScanControl()
+        let stoppable = Process()
+        stoppable.executableURL = URL(fileURLWithPath: "/bin/sleep")
+        stoppable.arguments = ["10"]
+        try stoppable.run()
+        scanControl.attach(stoppable)
+        scanControl.stop()
+        stoppable.waitUntilExit()
+        check(scanControl.isStopped && stoppable.terminationStatus != 0, "stopping a scan terminates its child process")
         let catalogs = URL(fileURLWithPath: ProcessInfo.processInfo.environment["MACTIDY_LOCALIZATION_DIR"]!)
         let english = AppLocalization.shared.english
-        check(english.count == 253, "English fallback is complete")
+        check(english.count == 312, "English fallback is complete")
         for url in try FileManager.default.contentsOfDirectory(at: catalogs, includingPropertiesForKeys: nil) where url.pathExtension == "json" {
             let catalog = try JSONDecoder().decode([String: String].self, from: Data(contentsOf: url))
             check(Set(catalog.keys) == Set(english.keys) && english.allSatisfy { AppLocalization.tokens($0.value) == AppLocalization.tokens(catalog[$0.key] ?? "") }, "catalog keys and placeholders: " + url.lastPathComponent)
@@ -177,11 +215,19 @@ func blockOn(_ gate: DispatchSemaphore) { gate.wait() }
         try write("weekly/fresh.txt", 10); try write("weekly/folder/child", 10); try write("weekly/.hidden", 10)
         let weekly = root.appendingPathComponent("weekly")
         try fm.createSymbolicLink(at: weekly.appendingPathComponent("link"), withDestinationURL: original.url)
+        try write("weekly/.localized", 0); try write("weekly/.DS_Store", 10)
+        try write("weekly/movie.mp4.crdownload", 10); try write("weekly/page.download/data", 10)
+        var recent: [String] = []
+        _ = WeeklyCleanup.run(root: weekly) { recent.append($0.lastPathComponent) }
+        check(recent.isEmpty, "weekly leaves items changed in the last minutes")
+        let later = Date().addingTimeInterval(WeeklyCleanup.recentGrace + 60)
         var moved: [String] = []
-        let report = WeeklyCleanup.run(root: weekly) { moved.append($0.lastPathComponent) }
-        check(Set(moved) == ["fresh.txt", "folder", ".hidden", "link"] && report.moved == 4, "weekly includes new files, whole folders, hidden files and links")
+        let report = WeeklyCleanup.run(root: weekly, now: later) { moved.append($0.lastPathComponent) }
+        check(Set(moved) == ["fresh.txt", "folder", ".hidden", "link"] && report.moved == 4, "weekly includes older files, whole folders, hidden files and links")
+        check(!moved.contains(".localized") && !moved.contains(".DS_Store"), "weekly keeps Finder metadata such as .localized")
+        check(!moved.contains("movie.mp4.crdownload") && !moved.contains("page.download"), "weekly keeps unfinished downloads")
         check(fm.fileExists(atPath: original.url.path), "weekly does not traverse symlink targets")
-        let partial = WeeklyCleanup.run(root: weekly) { u in if u.lastPathComponent == "folder" { throw CleanerError(message: "Injected failure") } }
+        let partial = WeeklyCleanup.run(root: weekly, now: later) { u in if u.lastPathComponent == "folder" { throw CleanerError(message: "Injected failure") } }
         check(partial.moved == 3 && partial.failures.count == 1, "weekly reports partial failures")
         let missing = WeeklyCleanup.run(root: root.appendingPathComponent("missing")) { _ in preconditionFailure("Must not move") }
         check(missing.moved == 0 && missing.failures.count == 1, "weekly reports inaccessible root")
@@ -200,7 +246,18 @@ func blockOn(_ gate: DispatchSemaphore) { gate.wait() }
         let weeklyConfig = WeeklySchedule.configuration(helper: root.appendingPathComponent("Helper With Spaces.app"))
         let calendar = weeklyConfig["StartCalendarInterval"] as? [String: Int]
         check(calendar == ["Weekday": 0, "Hour": 12, "Minute": 0], "weekly launch calendar")
-        check(weeklyConfig["RunAtLoad"] == nil && weeklyConfig["KeepAlive"] == nil, "enabling does not trigger immediate cleanup or retries")
+        check(weeklyConfig["RunAtLoad"] as? Bool == true && weeklyConfig["KeepAlive"] == nil, "login checks for a missed run without enabling repeated retries")
+        let helperURL = root.appendingPathComponent("Helper With Spaces.app")
+        let dailyConfig = WeeklySchedule.configuration(helper: helperURL, cadence: .daily)
+        let monthlyConfig = WeeklySchedule.configuration(helper: helperURL, cadence: .monthly)
+        check(dailyConfig["StartCalendarInterval"] as? [String: Int] == ["Hour": 12, "Minute": 0], "daily launch calendar")
+        check(monthlyConfig["StartCalendarInterval"] as? [String: Int] == ["Day": 1, "Hour": 12, "Minute": 0], "monthly launch calendar")
+        let dueTime = Date()
+        let encodedNextRun = try PropertyListEncoder().encode(CleanupNextRun(date: dueTime))
+        let decodedNextRun = try PropertyListDecoder().decode(CleanupNextRun.self, from: encodedNextRun)
+        check(abs(decodedNextRun.date.timeIntervalSince(dueTime)) < 0.001, "next cleanup date can be saved and restored")
+        check(WeeklySchedule.isDue(nextRun: dueTime.addingTimeInterval(-1), now: dueTime), "missed run is due after next login")
+        check(!WeeklySchedule.isDue(nextRun: dueTime.addingTimeInterval(1), now: dueTime) && !WeeklySchedule.isDue(nextRun: nil, now: dueTime), "new schedule does not clean up immediately")
         let args = weeklyConfig["ProgramArguments"] as? [String]
         check(args?.count == 1 && args![0].contains("Helper With Spaces.app"), "helper path with spaces remains a single argument")
         let now = Date()

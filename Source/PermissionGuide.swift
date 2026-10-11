@@ -43,7 +43,7 @@ struct PermissionGuideView: View {
             }
         }
         .padding(25).frame(width: 520)
-        .background(Color(nsColor: .windowBackgroundColor)).tint(.primary)
+        .background(Color(nsColor: .windowBackgroundColor)).tint(Brand.blue)
     }
 
     private func close() {

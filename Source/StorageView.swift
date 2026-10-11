@@ -127,7 +127,7 @@ struct StorageView: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
         }
         .padding(24).frame(minWidth: 850, minHeight: 640)
-        .background(Color(nsColor: .windowBackgroundColor)).tint(.primary)
+        .background(Color(nsColor: .windowBackgroundColor)).tint(Brand.blue)
         .task { if !m.hasScanned && !m.busy { m.scan() } }
         .onDisappear { m.cancel() }
         .onReceive(NotificationCenter.default.publisher(for: .init("MacTidyLanguageUpdated"))) { _ in m.objectWillChange.send() }

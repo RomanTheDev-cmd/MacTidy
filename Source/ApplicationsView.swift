@@ -193,7 +193,7 @@ struct ApplicationsView: View {
             }
         }
         .padding(28).frame(minWidth: 760, minHeight: 620)
-        .background(Color(nsColor: .windowBackgroundColor)).tint(.primary)
+        .background(Color(nsColor: .windowBackgroundColor)).tint(Brand.blue)
         .onReceive(NotificationCenter.default.publisher(for: .init("MacTidyLanguageUpdated"))) { _ in m.objectWillChange.send() }
         .onAppear { m.refreshRunning() }
         .onReceive(NSWorkspace.shared.notificationCenter.publisher(for: NSWorkspace.didLaunchApplicationNotification)) { _ in m.refreshRunning() }

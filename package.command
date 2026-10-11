@@ -53,6 +53,24 @@ XML
 /bin/cp "dist/MacSpace-$version-$arch.pkg" "dist/MacTidy-$version-$arch.pkg"
 (cd dist && /usr/bin/shasum -a 256 "MacTidy-$version-$arch.pkg" > "MacTidy-$version-$arch.pkg.sha256")
 
+# Ship the corresponding ClamAV source archive beside the installer release.
+clamav_version=1.5.4
+clamav_source="dist/ClamAV-$clamav_version-source.tar.gz"
+clamav_source_url="https://github.com/Cisco-Talos/clamav/releases/download/clamav-$clamav_version/clamav-$clamav_version.tar.gz"
+clamav_source_sha256=1af1117a228f1b5bc7fa91a0dabc37848a99e7d25188e9be8043332ce721dfd3
+actual_source_sha256=""
+if [[ -f "$clamav_source" ]]; then actual_source_sha256=$(/usr/bin/shasum -a 256 "$clamav_source" | /usr/bin/awk '{print $1}'); fi
+if [[ "$actual_source_sha256" != "$clamav_source_sha256" ]]; then
+    /usr/bin/curl --fail --location --retry 3 --output "$clamav_source" "$clamav_source_url"
+    actual_source_sha256=$(/usr/bin/shasum -a 256 "$clamav_source" | /usr/bin/awk '{print $1}')
+fi
+if [[ "$actual_source_sha256" != "$clamav_source_sha256" ]]; then
+    /bin/rm -f "$clamav_source"
+    print -u2 "ClamAV source archive checksum mismatch."
+    exit 1
+fi
+(cd dist && /usr/bin/shasum -a 256 "ClamAV-$clamav_version-source.tar.gz" > "ClamAV-$clamav_version-source.tar.gz.sha256")
+
 if [[ -n "${MACTIDY_SIGNING_KEY:-}" ]]; then
     swift Tools/sign-release.swift "$MACTIDY_SIGNING_KEY" "dist/MacSpace-$version-$arch.pkg" "dist/MacSpace-$version-$arch.pkg.sig"
     /bin/cp "dist/MacSpace-$version-$arch.pkg.sig" "dist/MacTidy-$version-$arch.pkg.sig"

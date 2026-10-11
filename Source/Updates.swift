@@ -64,7 +64,7 @@ struct AvailableUpdate {
               }),
               let package = release.assets.first(where: { $0.name == packageName }),
               let signature = release.assets.first(where: { $0.name == packageName + ".sig" }),
-              package.size > 100_000 && package.size < 150_000_000,
+              package.size > 100_000 && package.size < 600_000_000,
               signature.size == 64,
               package.expectedHash != nil, signature.expectedHash != nil,
               package.validatedURL(tag: release.tag_name) != nil,
@@ -124,10 +124,6 @@ enum UpdateVerifier {
             available = try AvailableUpdate.parse(data, current: current, architecture: architecture)
             if let available {
                 message = L("s152", available.version.description)
-                if automatic && UserDefaults.standard.string(forKey: "autoOpenedUpdateVersion") != available.version.description {
-                    busy = false
-                    await install()
-                }
             } else { message = automatic ? nil : L("s156") }
         } catch { message = L("s158", error.localizedDescription) }
     }
@@ -139,7 +135,6 @@ enum UpdateVerifier {
         do {
             let packageURL = try await verifiedPackage(for: available)
             guard NSWorkspace.shared.open(packageURL) else { throw UpdateError.installerFailed }
-            UserDefaults.standard.set(available.version.description, forKey: "autoOpenedUpdateVersion")
             message = L("s155")
         } catch { message = L("s158", error.localizedDescription) }
     }
@@ -164,11 +159,11 @@ enum UpdateVerifier {
     private func download(_ asset: ReleaseAsset, tag: String) async throws -> Data {
         guard let url = asset.validatedURL(tag: tag), let hash = asset.expectedHash else { throw UpdateError.invalidRelease }
         var request = URLRequest(url: url)
-        request.timeoutInterval = 60
+        request.timeoutInterval = 600
         request.setValue("MacSpace-updater", forHTTPHeaderField: "User-Agent")
         let (file, response) = try await URLSession.shared.download(for: request)
         guard let http = response as? HTTPURLResponse, http.statusCode == 200 else { throw UpdateError.badResponse }
-        let data = try Data(contentsOf: file)
+        let data = try Data(contentsOf: file, options: .mappedIfSafe)
         guard data.count == asset.size, UpdateVerifier.hash(data) == hash else { throw UpdateError.badDownload }
         return data
     }

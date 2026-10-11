@@ -21,11 +21,7 @@
     <linearGradient id="spark" x1="677" y1="278" x2="749" y2="383" gradientUnits="userSpaceOnUse">
       <stop offset="0" stop-color="#ffffff"/><stop offset="0.5" stop-color="#d4efff"/><stop offset="1" stop-color="#80bde1"/>
     </linearGradient>
-    <linearGradient id="tile" x1="110" y1="100" x2="910" y2="915" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#e7e8e9"/>
-      <stop offset="0.52" stop-color="#d9dbdd"/>
-      <stop offset="1" stop-color="#c0c4c7"/>
-    </linearGradient>
+    <linearGradient id="tile" x1="110" y1="100" x2="910" y2="915" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#47586B"/><stop offset="0.55" stop-color="#2C3947"/><stop offset="1" stop-color="#1A232D"/></linearGradient>
     <linearGradient id="tileEdge" x1="130" y1="110" x2="890" y2="900" gradientUnits="userSpaceOnUse">
       <stop offset="0" stop-color="#ffffff"/>
       <stop offset="0.65" stop-color="#f5f6f8"/>
@@ -35,9 +31,9 @@
       <feGaussianBlur stdDeviation="18"/>
     </filter>
   </defs>
-  <rect x="110" y="124" width="804" height="804" rx="188" fill="#182634" opacity=".22" filter="url(#tileShadow)"/>
-  <rect x="98" y="99" width="828" height="828" rx="192" fill="url(#tile)" stroke="url(#tileEdge)" stroke-width="11"/>
-  <path d="M291 113 H731 C835 113 912 190 912 294" fill="none" stroke="#ffffff" stroke-opacity=".62" stroke-width="6" stroke-linecap="round"/>
+  <rect x="110" y="124" width="804" height="804" rx="188" fill="#182634" opacity=".35" filter="url(#tileShadow)"/>
+  <rect x="98" y="99" width="828" height="828" rx="192" fill="url(#tile)" stroke="#6E8296" stroke-width="10"/><rect x="108" y="109" width="808" height="808" rx="182" fill="none" stroke="#8FA3B8" stroke-opacity=".7" stroke-width="4"/>
+
   <g transform="translate(160 160) scale(.68)">
   <g stroke="#244e6c" stroke-width="7" stroke-linejoin="round" stroke-linecap="round">
     <path d="M251 188 C286 163 323 172 343 208 L437 378 L334 437 L221 288 C195 255 215 209 251 188 Z" fill="url(#handle)"/>

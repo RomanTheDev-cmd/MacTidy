@@ -107,7 +107,7 @@ struct DiskAuditView: View {
             if let error = m.error { Text(error).font(.caption).foregroundStyle(.red) }
         }
         .padding(23).frame(width: 760, height: 610)
-        .background(Color(nsColor: .windowBackgroundColor)).tint(.primary)
+        .background(Color(nsColor: .windowBackgroundColor)).tint(Brand.blue)
         .task { m.load() }
         .onDisappear { m.stop() }
         .alert(m.appDataToTrash == nil ? L("s232") : L("s234"), isPresented: Binding(get: { m.fileToTrash != nil || m.appDataToTrash != nil }, set: {

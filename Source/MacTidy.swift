@@ -18,15 +18,82 @@ extension View {
     func primaryControl() -> some View { self.buttonStyle(GraphiteButtonStyle()) }
 
 }
+enum Brand {
+    static let blue = Color.accentColor
+    static let ring = AngularGradient(colors: [Color(red: 0.0, green: 0.48, blue: 1.0), Color(red: 0.35, green: 0.78, blue: 0.98),
+                                                Color(red: 0.0, green: 0.48, blue: 1.0)], center: .center)
+    static let spring = Animation.spring(response: 0.35, dampingFraction: 0.86)
+    static let telegram = URL(string: "https://t.me/R_3Design")!
+}
+// The command line toolchain has no SwiftUI macro plugin, so view state uses State values directly instead of @State.
 struct GraphiteButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View { ProminentButton(configuration: configuration) }
+}
+private struct ProminentButton: View {
+    let configuration: ButtonStyle.Configuration
     @Environment(\.isEnabled) private var enabled
-    func makeBody(configuration: Configuration) -> some View {
+    private let hovering = State(initialValue: false)
+    var body: some View {
         configuration.label.font(.system(size: 13, weight: .semibold))
             .foregroundStyle(enabled ? Color.white : Color.secondary)
-            .padding(.horizontal, 17).padding(.vertical, 10)
-            .background(enabled ? Color(white: configuration.isPressed ? 0.22 : 0.08) : Color.primary.opacity(0.09), in: Capsule())
-            .overlay(Capsule().stroke(Color.white.opacity(enabled ? 0.18 : 0.06), lineWidth: 1))
-            .shadow(color: .black.opacity(enabled ? 0.10 : 0), radius: 3, y: 2)
+            .padding(.horizontal, 18).padding(.vertical, 10)
+            .background(enabled ? AnyShapeStyle(Color.accentColor) : AnyShapeStyle(Color.primary.opacity(0.08)), in: Capsule())
+            .brightness(hovering.wrappedValue && !configuration.isPressed ? 0.05 : 0)
+            .scaleEffect(configuration.isPressed ? 0.97 : 1)
+            .animation(Brand.spring, value: configuration.isPressed)
+            .animation(.easeOut(duration: 0.15), value: hovering.wrappedValue)
+            .onHover { hovering.wrappedValue = enabled && $0 }
+    }
+}
+/// Free-space gauge in the style of macOS storage: the ring fills smoothly when it appears or the disk changes.
+struct StorageRing: View {
+    let used: Int64
+    let total: Int64
+    let available: Int64
+    private let shown = State(initialValue: 0.0)
+    private var fraction: Double { total > 0 ? min(1, max(0, Double(used) / Double(total))) : 0 }
+    var body: some View {
+        ZStack {
+            Circle().stroke(Color.primary.opacity(0.07), lineWidth: 14)
+            Circle().trim(from: 0, to: shown.wrappedValue)
+                .stroke(Brand.ring, style: StrokeStyle(lineWidth: 14, lineCap: .round))
+                .rotationEffect(.degrees(-90))
+            VStack(spacing: 3) {
+                Text(bytes(available)).font(.system(size: 32, weight: .semibold, design: .rounded)).monospacedDigit()
+                    .minimumScaleFactor(0.6).lineLimit(1)
+                Text(L("s108", bytes(total))).font(.caption).foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center).lineLimit(2)
+            }.padding(.horizontal, 26)
+        }
+        .frame(width: 200, height: 200)
+        .onAppear { withAnimation(.easeOut(duration: 1.0).delay(0.15)) { shown.wrappedValue = fraction } }
+        .onChange(of: fraction) { value in withAnimation(.easeInOut(duration: 0.6)) { shown.wrappedValue = value } }
+        .accessibilityElement(children: .combine)
+    }
+}
+/// Rounded tinted square with an SF Symbol, like the icons in System Settings.
+struct SymbolTile: View {
+    let symbol: String
+    let color: Color
+    var size: CGFloat = 40
+    var body: some View {
+        Image(systemName: symbol).font(.system(size: size * 0.46, weight: .semibold)).foregroundStyle(.white)
+            .frame(width: size, height: size)
+            .background(color.gradient, in: RoundedRectangle(cornerRadius: size * 0.26, style: .continuous))
+    }
+}
+struct SupportCard: View {
+    var body: some View {
+        HStack(spacing: 14) {
+            SymbolTile(symbol: "heart.fill", color: .pink)
+            VStack(alignment: .leading, spacing: 3) {
+                Text(L("s312")).font(.headline)
+                Text(L("s313")).font(.caption).foregroundStyle(.secondary).fixedSize(horizontal: false, vertical: true)
+            }
+            Spacer(minLength: 8)
+            Link(destination: Brand.telegram) { Label("@R_3Design", systemImage: "paperplane.fill") }
+                .buttonStyle(GraphiteButtonStyle()).help(L("s314")).accessibilityLabel(L("s314"))
+        }
     }
 }
 struct Surface<Content: View>: View {
@@ -58,6 +125,7 @@ enum ResultSort: String, CaseIterable {
     @Published var capacity = DiskCapacity(total: 0, immediateFree: 0, available: 0)
     @Published var excluded = Set(UserDefaults.standard.stringArray(forKey: "excludedPaths") ?? [])
     @Published var weeklyEnabled = WeeklySchedule.enabled
+    @Published var cleanupCadence = WeeklySchedule.cadence
     @Published var weeklyBusy = false
     @Published var weeklyConfirm = false
     @Published var weeklyResult = WeeklySchedule.lastResult()
@@ -148,50 +216,72 @@ enum ResultSort: String, CaseIterable {
     func setWeekly(_ enabled: Bool) {
         guard !weeklyBusy else { return }; weeklyBusy = true
         let helper = Bundle.main.bundleURL.appendingPathComponent("Contents/Library/LoginItems/MacTidyHelper.app")
+        let cadence = cleanupCadence
         Task {
             do {
-                try await Task.detached { if enabled { try WeeklySchedule.enable(helper: helper) } else { try WeeklySchedule.disable() } }.value
+                try await Task.detached { if enabled { try WeeklySchedule.enable(helper: helper, cadence: cadence) } else { try WeeklySchedule.disable() } }.value
             } catch { self.error = error.localizedDescription }
-            weeklyEnabled = WeeklySchedule.enabled; weeklyBusy = false; weeklyResult = WeeklySchedule.lastResult()
+            weeklyEnabled = WeeklySchedule.enabled; cleanupCadence = WeeklySchedule.cadence; weeklyBusy = false; weeklyResult = WeeklySchedule.lastResult()
         }
+    }
+    func setCleanupCadence(_ cadence: CleanupCadence) {
+        guard !weeklyBusy else { return }
+        cleanupCadence = cadence
+        WeeklySchedule.cadence = cadence
+        if weeklyEnabled { setWeekly(true) }
     }
 }
 @MainActor final class CleanupUIState: ObservableObject {
     @Published var showSettings = false
     @Published var showPermissions = false
     @Published var showCategories = false
+    @Published var showSupport = false
+    @Published var page: MacSpacePage = .cleanup
 }
+enum MacSpacePage: Hashable { case cleanup, antivirus }
 struct ContentView: View {
     @StateObject private var m = Model()
     @StateObject private var ui = CleanupUIState()
     @StateObject private var updater = UpdateModel()
+    @StateObject private var antivirus = AntivirusModel()
     @Environment(\.openWindow) private var openWindow
 
     var body: some View {
         VStack(spacing: 22) {
             header
+            pagePicker
             if updater.available != nil { updateBanner }
-            if !m.hasScanned && !m.busy { welcome }
-            else { review }
+            Group {
+                if ui.page == .antivirus { AntivirusView(model: antivirus).transition(.opacity.combined(with: .move(edge: .trailing))) }
+                else if !m.hasScanned && !m.busy { welcome.transition(.opacity.combined(with: .scale(scale: 0.98))) }
+                else { review.transition(.opacity.combined(with: .move(edge: .bottom))) }
+            }
+            .animation(Brand.spring, value: ui.page)
+            .animation(Brand.spring, value: m.hasScanned || m.busy)
         }
         .padding(28)
         .frame(minWidth: 760, minHeight: 620)
         .background {
             ZStack {
                 Color(nsColor: .windowBackgroundColor)
-                LinearGradient(colors: [.white.opacity(0.15), .gray.opacity(0.05), .clear], startPoint: .topLeading, endPoint: .bottomTrailing)
             }.ignoresSafeArea()
         }
-        .tint(.primary)
+        .tint(Brand.blue)
         .sheet(isPresented: $ui.showSettings) { settings }
+        .sheet(isPresented: $ui.showSupport) { supportSheet }
         .sheet(isPresented: $ui.showPermissions) { PermissionGuideView() }
         .task { await updater.check(automatic: true) }
-        .onAppear {
-            if !UserDefaults.standard.bool(forKey: "permissionsGuideSeen-v2") { ui.showPermissions = true }
+        .task { await antivirus.maintainDefinitions() }
+        .task {
+            let helper = Bundle.main.bundleURL.appendingPathComponent("Contents/Library/LoginItems/MacTidyHelper.app")
+            do { try await Task.detached { try WeeklySchedule.updateHelperIfNeeded(helper: helper) }.value }
+            catch { m.error = error.localizedDescription }
+            m.weeklyEnabled = WeeklySchedule.enabled
+            m.weeklyResult = WeeklySchedule.lastResult()
         }
         .onReceive(NotificationCenter.default.publisher(for: .init("MacTidyLanguageUpdated"))) { _ in m.objectWillChange.send() }
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
-            m.weeklyEnabled = WeeklySchedule.enabled; m.weeklyResult = WeeklySchedule.lastResult(); m.refreshDisk()
+            m.weeklyEnabled = WeeklySchedule.enabled; m.cleanupCadence = WeeklySchedule.cadence; m.weeklyResult = WeeklySchedule.lastResult(); m.refreshDisk()
         }
         .onChange(of: m.weeklyEnabled) { enabled in
             if enabled && !UserDefaults.standard.bool(forKey: "weeklyAccessGuideSeen-v1") {
@@ -202,7 +292,7 @@ struct ContentView: View {
         .alert(L("s099"), isPresented: $m.weeklyConfirm) {
             Button(L("s039"), role: .cancel) {}
             Button(L("s100")) { m.setWeekly(true) }
-        } message: { Text(L("s101")) }
+        } message: { Text(L("s101", m.cleanupCadence.title)) }
         .alert(L("s102"), isPresented: $m.confirm) {
             Button(L("s039"), role: .cancel) {}
             Button(L("s040"), role: .destructive) { m.trash() }
@@ -212,11 +302,21 @@ struct ContentView: View {
         } message: { Text(m.error ?? "") }
     }
 
+    private var pagePicker: some View {
+        Picker("", selection: $ui.page) {
+            Label(L("s256"), systemImage: "sparkles").tag(MacSpacePage.cleanup)
+            Label(L("s255"), systemImage: "shield.lefthalf.filled").tag(MacSpacePage.antivirus)
+        }
+        .pickerStyle(.segmented)
+        .frame(maxWidth: 390)
+    }
+
     private var header: some View {
         HStack(spacing: 12) {
             Image(nsImage: Bundle.main.url(forResource: "MacSpaceIcon", withExtension: "icns")
                 .flatMap { NSImage(contentsOf: $0) } ?? NSWorkspace.shared.icon(forFile: Bundle.main.bundlePath))
-                .resizable().frame(width: 42, height: 42)
+                .resizable().frame(width: 44, height: 44)
+                .shadow(color: .black.opacity(0.12), radius: 3, y: 1)
             VStack(alignment: .leading, spacing: 2) {
                 Text("MacSpace").font(.system(size: 23, weight: .semibold, design: .rounded))
                 Text(L("s104")).font(.caption).foregroundStyle(.secondary)
@@ -228,6 +328,8 @@ struct ContentView: View {
             Menu {
                 Button(L("s014"), systemImage: "square.grid.2x2") { openWindow(id: "applications") }
                 Button(L("s129"), systemImage: "slider.horizontal.3") { ui.showSettings = true }
+                Divider()
+                Button(L("s312"), systemImage: "heart") { ui.showSupport = true }
             } label: {
                 Image(systemName: "ellipsis.circle").font(.system(size: 18)).frame(width: 30, height: 30)
             }.menuStyle(.borderlessButton).fixedSize().help(L("s252")).accessibilityLabel(L("s252"))
@@ -250,13 +352,9 @@ struct ContentView: View {
     }
 
     private var diskSummary: some View {
-        VStack(spacing: 14) {
-            Image(systemName: "internaldrive").font(.system(size: 28, weight: .ultraLight)).foregroundStyle(.secondary)
-            Text(bytes(m.capacity.available)).font(.system(size: 43, weight: .semibold, design: .rounded)).monospacedDigit()
-            Text(L("s108", bytes(m.capacity.total))).font(.callout).foregroundStyle(.secondary)
-            ProgressView(value: Double(m.capacity.used), total: Double(max(1, m.capacity.total)))
-                .tint(.primary).frame(maxWidth: 340)
-            Text(L("s107")).font(.caption).foregroundStyle(.secondary)
+        VStack(spacing: 12) {
+            StorageRing(used: m.capacity.used, total: m.capacity.total, available: m.capacity.available)
+            Text(L("s107")).font(.caption.weight(.medium)).foregroundStyle(.secondary)
             if m.capacity.reclaimable > 0 {
                 Text(L("s253", bytes(m.capacity.reclaimable)))
                     .font(.caption2).foregroundStyle(.secondary)
@@ -281,6 +379,11 @@ struct ContentView: View {
             .keyboardShortcut("r", modifiers: .command)
             .padding(.top, 28)
             Spacer(minLength: 20)
+            Button { ui.showSupport = true } label: {
+                Label(L("s312"), systemImage: "heart.fill").font(.caption.weight(.medium))
+            }
+            .buttonStyle(.plain).foregroundStyle(.secondary)
+            .padding(.bottom, 16)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .glassPanel(radius: 24)
@@ -372,7 +475,7 @@ struct ContentView: View {
                 set: { if $0 { m.selected.insert(item.id) } else { m.selected.remove(item.id) } }
             )).labelsHidden().toggleStyle(.checkbox).disabled(m.cleaning)
             Image(systemName: item.entry.directory ? "folder.fill" : item.category.symbol)
-                .font(.system(size: 20)).foregroundStyle(.secondary).frame(width: 28)
+                .font(.system(size: 20)).foregroundStyle(Brand.blue).frame(width: 28)
             VStack(alignment: .leading, spacing: 3) {
                 Text(item.entry.url.lastPathComponent).font(.callout.weight(.medium)).lineLimit(1)
                 Text(displayPath(item.entry.url.deletingLastPathComponent())).font(.caption)
@@ -382,9 +485,11 @@ struct ContentView: View {
             Text(bytes(item.entry.size)).font(.callout.weight(.semibold)).monospacedDigit()
         }
         .padding(11).contentShape(Rectangle())
-        .background(m.focused == item.id ? Color.primary.opacity(0.10) :
-                    (m.selected.contains(item.id) ? Color.primary.opacity(0.045) : .clear),
+        .background(m.focused == item.id ? Brand.blue.opacity(0.16) :
+                    (m.selected.contains(item.id) ? Brand.blue.opacity(0.07) : .clear),
                     in: RoundedRectangle(cornerRadius: 11))
+        .animation(.easeOut(duration: 0.15), value: m.selected.contains(item.id))
+        .animation(.easeOut(duration: 0.15), value: m.focused)
         .onTapGesture { m.focused = item.id }
         .contextMenu {
             Button(L("s048")) { NSWorkspace.shared.activateFileViewerSelecting([item.entry.url]) }
@@ -412,6 +517,20 @@ struct ContentView: View {
                 .primaryControl().disabled(m.selected.isEmpty || m.busy || m.cleaning)
         }
         .padding(17).glassPanel(radius: 18)
+    }
+
+    private var supportSheet: some View {
+        VStack(spacing: 16) {
+            SymbolTile(symbol: "heart.fill", color: .pink, size: 64)
+            Text(L("s315")).font(.title2.weight(.semibold)).multilineTextAlignment(.center)
+            Text(L("s313")).font(.callout).foregroundStyle(.secondary).multilineTextAlignment(.center)
+                .fixedSize(horizontal: false, vertical: true)
+            Link(destination: Brand.telegram) {
+                Label(L("s314") + " · @R_3Design", systemImage: "paperplane.fill").padding(.vertical, 2)
+            }.buttonStyle(GraphiteButtonStyle()).padding(.top, 4)
+            Button(L("s197")) { ui.showSupport = false }.buttonStyle(.borderless).keyboardShortcut(.escape)
+        }
+        .padding(32).frame(width: 400)
     }
 
     private var settings: some View {
@@ -479,9 +598,17 @@ struct ContentView: View {
                         get: { m.weeklyEnabled },
                         set: { if $0 { m.weeklyConfirm = true } else { m.setWeekly(false) } }
                     )).disabled(m.weeklyBusy || m.cleaning)
+                    HStack {
+                        Text(L("s286"))
+                        Spacer()
+                        Picker(L("s286"), selection: Binding(get: { m.cleanupCadence }, set: { m.setCleanupCadence($0) })) {
+                            ForEach(CleanupCadence.allCases) { cadence in Text(cadence.title).tag(cadence) }
+                        }.labelsHidden().frame(width: 160).disabled(m.weeklyBusy || m.cleaning)
+                    }
                     Text(L("s139")).font(.caption).foregroundStyle(.secondary)
                     Text(m.weeklyResult).font(.caption).foregroundStyle(.secondary)
                 }.padding(18).glassPanel(radius: 18)
+                SupportCard().padding(18).glassPanel(radius: 18)
             }.padding(24)
         }.frame(width: 540, height: 630)
     }
@@ -492,6 +619,9 @@ struct ContentView: View {
         if let url = Bundle.main.url(forResource: "MacSpaceIcon", withExtension: "icns"), let icon = NSImage(contentsOf: url) {
             NSApplication.shared.applicationIconImage = icon
         }
+    }
+    func applicationWillTerminate(_ notification: Notification) {
+        AntivirusEngine.cancelActiveScan()
     }
 }
 @main struct MacTidy: App {

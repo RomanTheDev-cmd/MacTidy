@@ -91,7 +91,7 @@ struct CloudLocalView: View {
             if let error = m.error { Text(error).font(.caption).foregroundStyle(.red) }
         }
         .padding(23).frame(width: 760, height: 570)
-        .background(Color(nsColor: .windowBackgroundColor)).tint(.primary)
+        .background(Color(nsColor: .windowBackgroundColor)).tint(Brand.blue)
         .task { m.load() }
         .onDisappear { m.stop() }
         .alert(m.selected.map { L("s246", $0.url.lastPathComponent) } ?? L("s242"),

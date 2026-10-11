@@ -1,5 +1,24 @@
 # Changelog
 
+## 3.0.0
+
+- Refresh the look in the style of macOS: a storage ring that fills smoothly, system-blue buttons with gentle press animations, a calmer antivirus badge, and smooth tab transitions. The app icon now uses a dark graphite tile with an outline so it stays visible on any background.
+- Add a Support the project card with a link to the author on Telegram.
+- Show live antivirus progress, checked-file count, elapsed time, and an approximate remaining time after file counting. Findings appear as they are detected; users can stop a long scan. Keep a local history of the last 20 scans and their findings.
+- Add daily, weekly, and monthly Downloads cleanup schedules. If a scheduled run is missed while the Mac is off, the helper checks for it at the next login. All items go to Trash; Trash is never emptied.
+- Scheduled Downloads cleanup keeps Finder's `.localized` and `.DS_Store` files, so the folder keeps its localized name, and leaves unfinished downloads and items changed in the last 10 minutes.
+- Refresh an already enabled cleanup helper automatically when the updated app opens, retaining an overdue cleanup time. Fix saving the next cleanup date so enabling the schedule no longer shows a format error.
+- Start directly in the main window without a permissions setup sheet; keep the access guide in settings for protected folders.
+- Let users move an individual antivirus finding to Trash only after a separate confirmation. iCloud folders are excluded from scanning, and protected system files cannot be moved.
+- Finish a full antivirus scan normally when macOS denies access to some system folders, and report how many locations were skipped. Connected flash drives and external disks are scanned too; network shares and Time Machine backup disks are skipped.
+- Translate the antivirus interface into all bundled languages. The bundled ClamAV engine loads only its own libraries, never a separately installed copy.
+- Keep the bundled ClamAV engine on Cisco Talos's 1.5.4 release. Refresh its official definitions at app launch and every two hours while MacSpace stays open; after the first download, FreshClam applies incremental updates. Definitions are stored separately from the app bundle.
+
+## 2.9.0
+
+- Add an Antivirus tab with the ClamAV engine bundled in the app. Virus definitions update at app launch; full-disk scanning starts only on request and lists findings without uploading files.
+- Use the existing signed GitHub release updater to install this app version.
+
 ## 2.8.2
 
 - Use the same light silver tile and compact blue brush icon in Finder and in the Dock, both while MacSpace is open and while it is closed.
