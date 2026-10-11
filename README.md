@@ -16,7 +16,20 @@ MacSpace starts without a setup wizard and scans files it can access. For protec
 
 If scheduled Downloads cleanup is enabled, **MacSpace Helper** is a separate app and also needs file access. The guide then offers **Show helper** so you can add it in the same Full Disk Access pane. Without that access, scheduled cleanup may fail and will report the error rather than removing files.
 
-The prebuilt installer requires **Apple Silicon (M1 or newer) and macOS 13+**. The app is ad-hoc signed; the installer is unsigned and the release is not Apple-notarized. macOS may block it. After attempting to open the downloaded installer, use **System Settings → Privacy & Security → Open Anyway** if available and you trust this release. Managed Macs may disallow this. No Developer ID certificate is included.
+The prebuilt installer requires **Apple Silicon (M1 or newer) and macOS 13+**.
+
+### If macOS says the installer "was not opened"
+
+On first launch macOS may show: *"MacSpace-…-arm64.pkg" was not opened — Apple could not verify that it is free of malware.* This is expected and does not mean the file is harmful. **Do not click Move to Trash.**
+
+1. Click **Done**.
+2. Open **System Settings → Privacy & Security**.
+3. Scroll down to the **Security** section. Next to the message about "MacSpace-…-arm64.pkg", click **Open Anyway**.
+4. Confirm with your password or Touch ID, then click **Open** once more. The installer starts.
+
+You only need to do this once. After installation, MacSpace opens and updates without this warning.
+
+**Why this happens.** Apple shows this warning for every app that is not notarized — checked and countersigned by Apple using a paid Apple Developer certificate ($99 per year). MacSpace is a free independent project and doesn't use that paid certificate yet. Instead, every release is signed with the project's own key, and the app checks that signature before installing an update, so updates can't be tampered with. On Macs managed by an organization, an administrator may disable **Open Anyway**.
 
 ## What it does
 
