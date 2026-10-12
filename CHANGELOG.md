@@ -1,5 +1,11 @@
 # Changelog
 
+## 3.0.1
+
+- Fix moving app caches to Trash: caches that their apps keep writing to (Spotify, browsers, macOS services) no longer fail with "The item or its contents have changed". A cache folder is still rejected if it was replaced after the scan.
+- When app data in the storage window changed because its app is open, explain that and suggest quitting the app instead of the misleading "no longer a regular file" message.
+- Explain the macOS "was not opened" warning and how to install anyway in the README.
+
 ## 3.0.0
 
 - Refresh the look in the style of macOS: a storage ring that fills smoothly, system-blue buttons with gentle press animations, a calmer antivirus badge, and smooth tab transitions. The app icon now uses a dark graphite tile with an outline so it stays visible on any background.

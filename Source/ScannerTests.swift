@@ -54,7 +54,7 @@ func blockOn(_ gate: DispatchSemaphore) { gate.wait() }
         check(scanControl.isStopped && stoppable.terminationStatus != 0, "stopping a scan terminates its child process")
         let catalogs = URL(fileURLWithPath: ProcessInfo.processInfo.environment["MACTIDY_LOCALIZATION_DIR"]!)
         let english = AppLocalization.shared.english
-        check(english.count == 312, "English fallback is complete")
+        check(english.count == 313, "English fallback is complete")
         for url in try FileManager.default.contentsOfDirectory(at: catalogs, includingPropertiesForKeys: nil) where url.pathExtension == "json" {
             let catalog = try JSONDecoder().decode([String: String].self, from: Data(contentsOf: url))
             check(Set(catalog.keys) == Set(english.keys) && english.allSatisfy { AppLocalization.tokens($0.value) == AppLocalization.tokens(catalog[$0.key] ?? "") }, "catalog keys and placeholders: " + url.lastPathComponent)
@@ -195,7 +195,10 @@ func blockOn(_ gate: DispatchSemaphore) { gate.wait() }
         let appDate = try Scanner.values(cached.url).contentModificationDate!
         try write("cache/app/nested/data", 24000)
         try fm.setAttributes([.modificationDate: appDate], ofItemAtPath: cached.url.path)
-        rejects("nested cache change detected with unchanged top-level mtime") { _ = try Cleaner.validate(cached, root: cache, mode: .caches, cacheRoot: cache) }
+        check((try? Cleaner.validate(cached, root: cache, mode: .caches, cacheRoot: cache)) != nil, "cache written to by its app can still be moved")
+        try fm.removeItem(at: cached.url)
+        try write("cache/app/nested/data")
+        rejects("replaced cache folder is rejected") { _ = try Cleaner.validate(cached, root: cache, mode: .caches, cacheRoot: cache) }
         try write("trash/a"); try write("trash/b")
         let trashRoot = root.appendingPathComponent("trash")
         let pending = try Scanner.scan(root: trashRoot, caches: false, threshold: 0).entries

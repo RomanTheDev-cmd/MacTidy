@@ -175,10 +175,9 @@ enum DiskAudit {
             throw CleanerError(message: L("s081"))
         }
         let values = try Scanner.values(item)
-        guard values.isDirectory == true, values.isSymbolicLink != true,
-              try Scanner.stamp(values) == stamp else {
-            throw CleanerError(message: L("s084"))
-        }
+        guard values.isDirectory == true, values.isSymbolicLink != true else { throw CleanerError(message: L("s084")) }
+        // App data changes while its app is open; say so instead of the misleading "not a regular file".
+        guard try Scanner.stamp(values) == stamp else { throw CleanerError(message: L("s316")) }
         _ = try Scanner.measure(item)
         try move(item)
     }

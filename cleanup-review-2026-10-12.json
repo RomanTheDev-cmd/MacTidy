@@ -1,0 +1,15 @@
+{
+  "moved_at": "2026-10-12T06:57:47.975438+00:00",
+  "original": "/Users/roman/Library/Application Support/Autodesk/webdeploy/production/3b43ec78d72add6e53632c3a56d2981bc5441d8b",
+  "trash": "/Users/roman/.Trash/Autodesk-Fusion-2705.1.25-old-2026-10-12",
+  "reason": "Unused Autodesk Fusion 360 version 2705.1.25; active symlink points to 2705.1.30",
+  "size_kib_before": 11749232,
+  "trash_not_emptied": false,
+  "permanently_removed_at": "2026-10-12T06:58:52.587411+00:00",
+  "approved_by_user": true,
+  "disk_before_gb": 128.1,
+  "disk_after_gb": 202.5,
+  "local_time_machine_snapshots_removed": 20,
+  "remaining_time_machine_snapshot": "com.apple.TimeMachine.2026-05-31-083418.local (dataless)",
+  "notes": "Old Fusion 360 version 2705.1.25 was removed after explicit user approval; current version 2705.1.30 remains. iCloud, personal models and model weights were not touched."
+}

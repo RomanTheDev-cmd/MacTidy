@@ -28,6 +28,9 @@ struct Entry: Identifiable, Hashable, Sendable {
     let size: Int64
     let stamp: String
     let directory: Bool
+    /// Identity of a cache folder itself. Apps write into their caches all the time, so a cache is
+    /// rechecked by folder identity rather than by an unchanged content hash.
+    var identity: String? = nil
 }
 enum ScanKind: String, CaseIterable, Sendable { case caches, large }
 struct ScanResult: Sendable { var entries: [Entry] = []; var skipped = 0 }
@@ -51,6 +54,10 @@ struct Scanner {
             throw CleanerError(message: L("s075"))
         }
         return "\(identity)|\(date.timeIntervalSince1970)|\(v.fileSize ?? -1)|\(v.isDirectory == true)|\(v.isSymbolicLink == true)"
+    }
+    static func identity(_ v: URLResourceValues) throws -> String {
+        guard let identity = v.fileResourceIdentifier else { throw CleanerError(message: L("s075")) }
+        return "\(identity)|\(v.isDirectory == true)|\(v.isSymbolicLink == true)"
     }
     static func isInside(_ url: URL, root: URL) -> Bool {
         let prefix = root.path == "/" ? "/" : root.path + "/"
@@ -101,7 +108,10 @@ struct Scanner {
                     let v = try values(u)
                     guard v.isSymbolicLink != true, v.isUbiquitousItem != true else { continue }
                     let measured = try measure(u)
-                    if measured.size > 0 { result.entries.append(Entry(url: u, size: measured.size, stamp: measured.stamp, directory: v.isDirectory == true)) }
+                    if measured.size > 0 {
+                        result.entries.append(Entry(url: u, size: measured.size, stamp: measured.stamp, directory: v.isDirectory == true,
+                                                    identity: try identity(v)))
+                    }
                 } catch is CancellationError { throw CancellationError() }
                   catch { result.skipped += 1 }
             }
@@ -141,6 +151,11 @@ struct Cleaner {
         switch mode {
         case .caches:
             guard root.path == Scanner.canonical(cacheRoot).path, u.deletingLastPathComponent().path == root.path else { throw CleanerError(message: L("s083")) }
+            if let identity = item.identity {
+                // A replaced folder or a file swapped in under the same name is still rejected.
+                guard try Scanner.identity(v) == identity else { throw CleanerError(message: L("s085")) }
+                return u
+            }
             current = try Scanner.measure(u).stamp
         case .large:
             guard v.isRegularFile == true else { throw CleanerError(message: L("s084")) }
