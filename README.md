@@ -1,12 +1,12 @@
 # MacSpace
 
-A native macOS app for finding large files, reviewing clutter, and moving selected items to Trash. A simple first screen with one Scan button, a separate window for reviewing rarely used applications, and an optional daily, weekly, or monthly Downloads cleanup.
+A native macOS app for finding large files, reviewing clutter, and moving selected items to Trash. A simple first screen with one Scan button, an Applications tab for reviewing rarely used apps, and an optional daily, weekly, or monthly Downloads cleanup.
 
 [Русская документация](README.ru.md) · [Download installer](https://github.com/RomanTheDev-cmd/MacTidy/releases/latest)
 
 ## Install
 
-1. Download **MacSpace-3.0.1-arm64.pkg** from [Releases](https://github.com/RomanTheDev-cmd/MacTidy/releases/latest).
+1. Download **MacSpace-3.0.2-arm64.pkg** from [Releases](https://github.com/RomanTheDev-cmd/MacTidy/releases/latest).
 2. Double-click the installer and follow the standard macOS installation steps.
 3. Open **MacSpace** in **Applications**.
 
@@ -38,7 +38,7 @@ You only need to do this once. After installation, MacSpace opens and updates wi
 - Deduplicates overlapping results and rechecks files before moving them.
 - The storage window has a **What you can free up** button: it lists specific large personal files, eligible user app-data folders, and removable content inside third-party shared folders such as `/Library/Arturia`. Each row has Finder and Trash actions. A confirmation explains the impact, and MacSpace checks the path, identity, and access again before moving the item. System folders, the broad Users total, and protected Apple data are not in this cleanup list. Figures are approximate because APFS snapshots, shared blocks and access restrictions affect totals.
 - The **More** menu in the storage window opens a separate **Local iCloud copies** view. It lists only files already uploaded to iCloud with a downloaded local copy. Its **Remove Download** action uses macOS to evict only the local copy after confirmation; the cloud original stays. Ordinary Trash cleanup and the scheduled Downloads task skip iCloud items. iCloud may download a file again when it is opened.
-- The Applications window follows the same flow: scan first, then review apps unused for 30, 90, or 180 days using Spotlight history. Missing history is separate; running applications and MacSpace itself are protected. Apps without sufficient file permissions are marked unavailable and skipped by Select All. Only the app bundle is moved; documents and settings remain.
+- The **Applications** tab, next to Cleanup and Antivirus in the main window, follows the same flow: scan first, then review apps unused for 30, 90, or 180 days using Spotlight history. Missing history is separate; running applications and MacSpace itself are protected. Apps without sufficient file permissions are marked unavailable and skipped by Select All. Only the app bundle is moved; documents and settings remain.
 - The Storage by Type window estimates space used by photos, videos, audio, documents, installers, archives, apps, and other files. Select any personal-file category, including Other Files, to review individual files and move only selected items to Trash. System and protected folders remain excluded. The Applications category suggests up to three apps not opened for 90 days and opens the dedicated app review. Available space includes an estimate of space macOS can reclaim automatically, matching System Settings; local snapshots and APFS sharing can make the immediate physical free space smaller.
 - **Free up space** accepts a target in GB and presents alternatives: installers and archives, old downloads, large personal files, or a combined selection. It also links to rarely used apps for separate review. Review each suggested file, change the selection, and confirm before anything moves to Trash. Estimates may fall short of the target.
 - Optionally moves **everything in Downloads, including hidden files and whole folders**, to Trash daily, weekly, or monthly at 12:00 local time. Finder's `.localized` and `.DS_Store` files stay, so the folder keeps its localized name; unfinished downloads (`.crdownload`, `.download`, `.part`, `.partial`, `.opdownload`) and items changed in the last 10 minutes are left for the next run. If the Mac is off at the scheduled time, the helper checks for a missed run at the next login. This requires explicit opt-in. Trash is never emptied.

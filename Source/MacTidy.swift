@@ -238,12 +238,23 @@ enum ResultSort: String, CaseIterable {
     @Published var showSupport = false
     @Published var page: MacSpacePage = .cleanup
 }
-enum MacSpacePage: Hashable { case cleanup, antivirus }
+enum MacSpacePage: Hashable { case cleanup, applications, antivirus }
+extension Notification.Name { static let showApplications = Notification.Name("MacSpaceShowApplications") }
+/// Other windows open app review through this: it brings the main window forward on its Applications tab.
+@MainActor enum ApplicationsRoute {
+    static var pending = false
+    static func show(_ openWindow: OpenWindowAction) {
+        pending = true
+        openWindow(id: "main")
+        NotificationCenter.default.post(name: .showApplications, object: nil)
+    }
+}
 struct ContentView: View {
     @StateObject private var m = Model()
     @StateObject private var ui = CleanupUIState()
     @StateObject private var updater = UpdateModel()
     @StateObject private var antivirus = AntivirusModel()
+    @StateObject private var applications = ApplicationsModel()
     @Environment(\.openWindow) private var openWindow
 
     var body: some View {
@@ -253,6 +264,7 @@ struct ContentView: View {
             if updater.available != nil { updateBanner }
             Group {
                 if ui.page == .antivirus { AntivirusView(model: antivirus).transition(.opacity.combined(with: .move(edge: .trailing))) }
+                else if ui.page == .applications { ApplicationsView(m: applications).transition(.opacity) }
                 else if !m.hasScanned && !m.busy { welcome.transition(.opacity.combined(with: .scale(scale: 0.98))) }
                 else { review.transition(.opacity.combined(with: .move(edge: .bottom))) }
             }
@@ -279,7 +291,13 @@ struct ContentView: View {
             m.weeklyEnabled = WeeklySchedule.enabled
             m.weeklyResult = WeeklySchedule.lastResult()
         }
-        .onReceive(NotificationCenter.default.publisher(for: .init("MacTidyLanguageUpdated"))) { _ in m.objectWillChange.send() }
+        .onReceive(NotificationCenter.default.publisher(for: .init("MacTidyLanguageUpdated"))) { _ in
+            m.objectWillChange.send(); applications.objectWillChange.send()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .showApplications)) { _ in
+            ApplicationsRoute.pending = false; ui.page = .applications
+        }
+        .onAppear { if ApplicationsRoute.pending { ApplicationsRoute.pending = false; ui.page = .applications } }
         .onReceive(NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)) { _ in
             m.weeklyEnabled = WeeklySchedule.enabled; m.cleanupCadence = WeeklySchedule.cadence; m.weeklyResult = WeeklySchedule.lastResult(); m.refreshDisk()
         }
@@ -305,10 +323,11 @@ struct ContentView: View {
     private var pagePicker: some View {
         Picker("", selection: $ui.page) {
             Label(L("s256"), systemImage: "sparkles").tag(MacSpacePage.cleanup)
+            Label(L("s014"), systemImage: "square.grid.2x2").tag(MacSpacePage.applications)
             Label(L("s255"), systemImage: "shield.lefthalf.filled").tag(MacSpacePage.antivirus)
         }
         .pickerStyle(.segmented)
-        .frame(maxWidth: 390)
+        .frame(maxWidth: 480)
     }
 
     private var header: some View {
@@ -326,7 +345,6 @@ struct ContentView: View {
                 Label(L("s164"), systemImage: "internaldrive")
             }.buttonStyle(.bordered).help(L("s164"))
             Menu {
-                Button(L("s014"), systemImage: "square.grid.2x2") { openWindow(id: "applications") }
                 Button(L("s129"), systemImage: "slider.horizontal.3") { ui.showSettings = true }
                 Divider()
                 Button(L("s312"), systemImage: "heart") { ui.showSupport = true }
@@ -629,7 +647,6 @@ struct ContentView: View {
     var body: some Scene {
         Window("MacSpace", id: "main") { LocalizedRoot(translates: true) { ContentView() } }.windowStyle(.hiddenTitleBar).defaultSize(width: 920, height: 690)
         Window(L("s164"), id: "storage") { LocalizedRoot(translates: false) { StorageView() } }.windowStyle(.hiddenTitleBar).defaultSize(width: 1000, height: 730)
-        Window(L("s143"), id: "applications") { LocalizedRoot(translates: false) { ApplicationsView() } }.windowStyle(.hiddenTitleBar).defaultSize(width: 920, height: 690)
     }
 }
 #endif

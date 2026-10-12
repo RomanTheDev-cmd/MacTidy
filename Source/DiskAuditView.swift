@@ -100,7 +100,7 @@ struct DiskAuditView: View {
                 HStack {
                     Label(L("s239"), systemImage: "square.grid.2x2").font(.callout)
                     Spacer()
-                    Button(L("s017")) { openWindow(id: "applications"); dismiss() }
+                    Button(L("s017")) { ApplicationsRoute.show(openWindow); dismiss() }
                 }.padding(12).background(Color.primary.opacity(0.04), in: RoundedRectangle(cornerRadius: 12))
             }
             Text(L("s240")).font(.caption).foregroundStyle(.secondary)

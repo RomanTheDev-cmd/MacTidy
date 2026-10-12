@@ -87,28 +87,15 @@ import AppKit
     }
 }
 struct ApplicationsView: View {
-    @StateObject private var m = ApplicationsModel()
+    @ObservedObject var m: ApplicationsModel
     var body: some View {
         VStack(spacing: 20) {
-            HStack(spacing: 12) {
-                Image(systemName: "square.grid.2x2")
-                    .font(.system(size: 20, weight: .light)).frame(width: 42, height: 42).glassPanel(radius: 12)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(L("s014")).font(.system(size: 23, weight: .semibold, design: .rounded))
-                    Text(L("s015")).font(.caption).foregroundStyle(.secondary)
-                }
-                Spacer()
-                if m.hasScanned && !m.busy {
-                    Button { m.scan() } label: { Image(systemName: "arrow.clockwise") }
-                        .buttonStyle(.borderless).help(L("s017")).accessibilityLabel(L("s017"))
-                        .disabled(m.cleaning)
-                }
-            }
             if !m.hasScanned && !m.busy {
                 VStack(spacing: 16) {
                     Spacer()
-                    Image(systemName: "square.grid.2x2")
-                        .font(.system(size: 52, weight: .ultraLight)).foregroundStyle(.secondary)
+                    Image(systemName: "square.grid.2x2.fill")
+                        .font(.system(size: 28, weight: .medium)).foregroundStyle(Color.accentColor)
+                        .frame(width: 68, height: 68).background(Color.accentColor.opacity(0.13), in: Circle())
                     Text(L("s031")).font(.system(size: 25, weight: .semibold, design: .rounded))
                     Text(L("s033")).font(.callout).foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)
@@ -122,6 +109,11 @@ struct ApplicationsView: View {
                 HStack(spacing: 12) {
                     Text(L("s026", m.visible.count)).font(.title2.weight(.semibold))
                     Spacer()
+                    if m.hasScanned && !m.busy {
+                        Button { m.scan() } label: { Image(systemName: "arrow.clockwise") }
+                            .buttonStyle(.borderless).help(L("s017")).accessibilityLabel(L("s017"))
+                            .disabled(m.cleaning)
+                    }
                     if m.busy {
                         ProgressView().controlSize(.small)
                         Button(L("s016")) { m.cancel() }.buttonStyle(.bordered)
@@ -192,9 +184,7 @@ struct ApplicationsView: View {
                 }.padding(17).glassPanel(radius: 18)
             }
         }
-        .padding(28).frame(minWidth: 760, minHeight: 620)
-        .background(Color(nsColor: .windowBackgroundColor)).tint(Brand.blue)
-        .onReceive(NotificationCenter.default.publisher(for: .init("MacTidyLanguageUpdated"))) { _ in m.objectWillChange.send() }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .onAppear { m.refreshRunning() }
         .onReceive(NSWorkspace.shared.notificationCenter.publisher(for: NSWorkspace.didLaunchApplicationNotification)) { _ in m.refreshRunning() }
         .onReceive(NSWorkspace.shared.notificationCenter.publisher(for: NSWorkspace.didTerminateApplicationNotification)) { _ in m.refreshRunning() }
@@ -222,7 +212,8 @@ struct ApplicationsView: View {
                 if m.running.contains(app.id) { Text(L("s047")).font(.caption2).foregroundStyle(.secondary) }
                 else if m.unavailable.contains(app.id) { Text(L("s196")).font(.caption2).foregroundStyle(.secondary) }
             }
-        }.padding(10).contentShape(Rectangle()).background(m.focused == app.id ? Color.primary.opacity(0.09) : .clear, in: RoundedRectangle(cornerRadius: 10))
+        }.padding(10).contentShape(Rectangle()).background(m.focused == app.id ? Brand.blue.opacity(0.16) : (m.selected.contains(app.id) ? Brand.blue.opacity(0.07) : .clear), in: RoundedRectangle(cornerRadius: 10))
+            .animation(.easeOut(duration: 0.15), value: m.selected.contains(app.id))
             .onTapGesture { m.focused = app.id }
             .contextMenu { Button(L("s048")) { NSWorkspace.shared.activateFileViewerSelecting([app.url]) } }
     }

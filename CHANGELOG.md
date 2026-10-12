@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.0.2
+
+- Move app review into the main window: **Applications** is now a tab next to Cleanup and Antivirus instead of a separate window opened from the More menu. Buttons in Storage by Type open this tab.
+
 ## 3.0.1
 
 - Fix moving app caches to Trash: caches that their apps keep writing to (Spotify, browsers, macOS services) no longer fail with "The item or its contents have changed". A cache folder is still rejected if it was replaced after the scan.

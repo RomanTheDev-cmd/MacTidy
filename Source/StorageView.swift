@@ -225,7 +225,7 @@ struct StorageView: View {
                                 }
                             }.padding(13).frame(maxWidth: 350).background(Color.primary.opacity(0.04), in: RoundedRectangle(cornerRadius: 12))
                         }
-                        Button(L("s017")) { openWindow(id: "applications") }.primaryControl()
+                        Button(L("s017")) { ApplicationsRoute.show(openWindow) }.primaryControl()
                     }.padding(25).frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else if m.visible.isEmpty {
                     VStack(spacing: 12) {
@@ -384,7 +384,7 @@ struct SpacePlannerView: View {
                         if !model.suggestedApps.isEmpty {
                             Button {
                                 dismiss()
-                                openWindow(id: "applications")
+                                ApplicationsRoute.show(openWindow)
                             } label: {
                                 HStack(spacing: 14) {
                                     Image(systemName: "square.grid.2x2").font(.title3).frame(width: 28)
