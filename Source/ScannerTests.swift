@@ -81,7 +81,7 @@ final class DefinitionUpdateProbe: @unchecked Sendable {
         check(scanControl.isStopped && stoppable.terminationStatus != 0, "stopping a scan terminates its child process")
         let catalogs = URL(fileURLWithPath: ProcessInfo.processInfo.environment["MACTIDY_LOCALIZATION_DIR"]!)
         let english = AppLocalization.shared.english
-        check(english.count == 317, "English fallback is complete")
+        check(english.count == 320, "English fallback is complete")
         for url in try FileManager.default.contentsOfDirectory(at: catalogs, includingPropertiesForKeys: nil) where url.pathExtension == "json" {
             let catalog = try JSONDecoder().decode([String: String].self, from: Data(contentsOf: url))
             check(Set(catalog.keys) == Set(english.keys) && english.allSatisfy { AppLocalization.tokens($0.value) == AppLocalization.tokens(catalog[$0.key] ?? "") }, "catalog keys and placeholders: " + url.lastPathComponent)
@@ -107,6 +107,21 @@ final class DefinitionUpdateProbe: @unchecked Sendable {
         check(try AvailableUpdate.parse(releaseData, current: AppVersion("2.4.0")!) == nil, "current release is not reinstalled")
         var unsigned = release; unsigned["assets"] = [asset("MacTidy-2.4.0-arm64.pkg", 2_000_000)]
         rejects("unsigned release rejected") { _ = try AvailableUpdate.parse(JSONSerialization.data(withJSONObject: unsigned), current: AppVersion("2.3.0")!) }
+        let startupUpdate = UpdateModel(releaseFetcher: { releaseData }, installedVersion: { "2.3.0" })
+        await startupUpdate.check(automatic: true)
+        check(startupUpdate.shouldOffer && startupUpdate.available?.version == AppVersion("2.4.0"),
+              "startup check offers a newer signed release")
+        startupUpdate.postpone()
+        await startupUpdate.check(automatic: true)
+        check(startupUpdate.postponed && !startupUpdate.shouldOffer,
+              "later dismisses the offer for this launch")
+        await startupUpdate.check()
+        check(startupUpdate.available != nil && !startupUpdate.postponed && !startupUpdate.shouldOffer,
+              "manual check restores the update action without another startup alert")
+        let currentUpdate = UpdateModel(releaseFetcher: { releaseData }, installedVersion: { "2.4.0" })
+        await currentUpdate.check(automatic: true)
+        check(currentUpdate.available == nil && !currentUpdate.shouldOffer,
+              "startup check stays quiet for the installed release")
         let fm = FileManager.default
         let capacity = DiskCapacity.current()!
         let diskURL = fm.homeDirectoryForCurrentUser

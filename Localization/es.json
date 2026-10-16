@@ -315,5 +315,8 @@
   "s317": "La base de datos está lista. MacSpace volverá a buscar actualizaciones pronto.",
   "s318": "Preparando las definiciones de virus. MacSpace volverá a intentarlo automáticamente.",
   "s319": "No se pudo mover a la Papelera. Comprueba la autorización de macOS.",
-  "s320": "macOS pedirá autorización de administrador para algunas apps."
+  "s320": "macOS pedirá autorización de administrador para algunas apps.",
+  "s321": "Actualizar ahora",
+  "s322": "Más tarde",
+  "s323": "Puedes instalar la actualización más tarde desde Ajustes."
 }

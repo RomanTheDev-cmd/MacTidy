@@ -315,5 +315,8 @@
   "s317": "Il database è pronto. MacSpace cercherà presto nuovi aggiornamenti.",
   "s318": "Preparazione delle definizioni antivirus. MacSpace riproverà automaticamente.",
   "s319": "Impossibile spostare nel Cestino. Controlla l'autorizzazione di macOS.",
-  "s320": "macOS chiederà l'autorizzazione dell'amministratore per alcune app."
+  "s320": "macOS chiederà l'autorizzazione dell'amministratore per alcune app.",
+  "s321": "Aggiorna ora",
+  "s322": "Più tardi",
+  "s323": "Puoi installare l’aggiornamento più tardi dalle Impostazioni."
 }

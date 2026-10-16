@@ -315,5 +315,8 @@
   "s317": "Baza jest gotowa. MacSpace wkrótce ponownie sprawdzi aktualizacje.",
   "s318": "Przygotowywanie bazy wirusów. MacSpace automatycznie ponowi próbę.",
   "s319": "Nie udało się przenieść do Kosza. Sprawdź autoryzację macOS.",
-  "s320": "Dla niektórych aplikacji macOS poprosi o zgodę administratora."
+  "s320": "Dla niektórych aplikacji macOS poprosi o zgodę administratora.",
+  "s321": "Aktualizuj teraz",
+  "s322": "Później",
+  "s323": "Aktualizację można zainstalować później w Ustawieniach."
 }

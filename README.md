@@ -6,7 +6,7 @@ A native macOS app for finding large files, reviewing clutter, and moving select
 
 ## Install
 
-1. Download **MacSpace-3.0.3-arm64.pkg** from [Releases](https://github.com/RomanTheDev-cmd/MacTidy/releases/latest).
+1. Download **MacSpace-3.0.4-arm64.pkg** from [Releases](https://github.com/RomanTheDev-cmd/MacTidy/releases/latest).
 2. Double-click the installer and follow the standard macOS installation steps.
 3. Open **MacSpace** in **Applications**.
 
@@ -27,7 +27,7 @@ On first launch macOS may show: *"MacSpace-…-arm64.pkg" was not opened — App
 3. Scroll down to the **Security** section. Next to the message about "MacSpace-…-arm64.pkg", click **Open Anyway**.
 4. Confirm with your password or Touch ID, then click **Open** once more. The installer starts.
 
-You only need to do this once. After installation, MacSpace opens and updates without this warning.
+After installation, macOS may ask for approval again when opening a future update's installer.
 
 **Why this happens.** Apple shows this warning for every app that is not notarized — checked and countersigned by Apple using a paid Apple Developer certificate ($99 per year). MacSpace is a free independent project and doesn't use that paid certificate yet. Instead, every release is signed with the project's own key, and the app checks that signature before installing an update, so updates can't be tampered with. On Macs managed by an organization, an administrator may disable **Open Anyway**.
 
@@ -51,7 +51,7 @@ Antivirus includes the official universal macOS [ClamAV](https://github.com/Cisc
 
 ## Updates
 
-MacSpace checks for updates on every launch, using releases from the **RomanTheDev-cmd/MacTidy** repository only. When a newer signed Apple Silicon installer is available, MacSpace shows an offer; it downloads and opens the macOS Installer only after you click **Install update**. Before opening it, MacSpace verifies GitHub's SHA-256 digest and the release's Ed25519 signature against the public key built into the app. Complete the normal Installer steps, including administrator authorization if requested. The app cannot bypass macOS installation approval. If you defer the update, the offer appears again at the next launch; you can also check through **Settings → Check for updates**.
+MacSpace checks for updates on every launch, using releases from the **RomanTheDev-cmd/MacTidy** repository only. When a newer signed Apple Silicon installer is available, a dialog offers **Update now** or **Later**. It downloads and opens the macOS Installer only after you choose **Update now**. Before opening it, MacSpace verifies GitHub's SHA-256 digest and the release's Ed25519 signature against the public key built into the app. Complete the normal Installer steps, including administrator authorization if requested. The app cannot bypass macOS installation approval. If you choose Later, the offer appears again at the next launch; you can also use **Settings → Check for updates → Update now** at any time.
 
 Only releases with a matching signed `.pkg` are offered. The app update check contacts GitHub; it does not send scanned file names or contents. Official release packages include a detached `.pkg.sig` file. `package.command` can produce the same signature for a release maintainer when `MACTIDY_SIGNING_KEY` points to the private key matching `UpdateVerifier.officialPublicKey`; keep that private key outside the repository. Locally built packages without this signature can still be installed manually, but the in-app updater will reject them.
 

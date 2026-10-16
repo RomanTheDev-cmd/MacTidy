@@ -100,8 +100,23 @@ enum UpdateVerifier {
     @Published private(set) var available: AvailableUpdate?
     @Published private(set) var busy = false
     @Published private(set) var message: String?
+    @Published private(set) var shouldOffer = false
+    @Published private(set) var postponed = false
     private var checked = false
     private let endpoint = URL(string: "https://api.github.com/repos/RomanTheDev-cmd/MacTidy/releases/latest")!
+    private let releaseFetcher: (() async throws -> Data)?
+    private let installedVersion: () -> String
+
+    init(releaseFetcher: (() async throws -> Data)? = nil,
+         installedVersion: @escaping () -> String = {
+             Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? ""
+         }) {
+        self.releaseFetcher = releaseFetcher
+        self.installedVersion = installedVersion
+    }
+
+    func hideOffer() { shouldOffer = false }
+    func postpone() { shouldOffer = false; postponed = true }
 
     func check(automatic: Bool = false) async {
         guard !busy, !automatic || !checked else { return }
@@ -109,13 +124,19 @@ enum UpdateVerifier {
         if !automatic { message = L("s151") }
         defer { busy = false }
         do {
-            var request = URLRequest(url: endpoint)
-            request.timeoutInterval = 15
-            request.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")
-            request.setValue("MacSpace-updater", forHTTPHeaderField: "User-Agent")
-            let (data, response) = try await URLSession.shared.data(for: request)
-            guard let http = response as? HTTPURLResponse, http.statusCode == 200, data.count < 2_000_000 else { throw UpdateError.badResponse }
-            guard let current = AppVersion(Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "") else { throw UpdateError.invalidRelease }
+            let data: Data
+            if let releaseFetcher { data = try await releaseFetcher() }
+            else {
+                var request = URLRequest(url: endpoint)
+                request.timeoutInterval = 15
+                request.setValue("application/vnd.github+json", forHTTPHeaderField: "Accept")
+                request.setValue("MacSpace-updater", forHTTPHeaderField: "User-Agent")
+                let (downloaded, response) = try await URLSession.shared.data(for: request)
+                guard let http = response as? HTTPURLResponse, http.statusCode == 200 else { throw UpdateError.badResponse }
+                data = downloaded
+            }
+            guard data.count < 2_000_000 else { throw UpdateError.badResponse }
+            guard let current = AppVersion(installedVersion()) else { throw UpdateError.invalidRelease }
             #if arch(arm64)
             let architecture = "arm64"
             #else
@@ -124,12 +145,18 @@ enum UpdateVerifier {
             available = try AvailableUpdate.parse(data, current: current, architecture: architecture)
             if let available {
                 message = L("s152", available.version.description)
-            } else { message = automatic ? nil : L("s156") }
+                shouldOffer = automatic && !postponed
+                if !automatic { postponed = false }
+            } else {
+                shouldOffer = false; postponed = false
+                message = automatic ? nil : L("s156")
+            }
         } catch { message = L("s158", error.localizedDescription) }
     }
 
     func install() async {
         guard let available, !busy else { return }
+        shouldOffer = false; postponed = false
         busy = true; message = L("s153")
         defer { busy = false }
         do {

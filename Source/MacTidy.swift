@@ -393,7 +393,7 @@ struct ContentView: View {
         VStack(spacing: 22) {
             header
             pagePicker
-            if updater.available != nil { updateBanner }
+            if updater.available != nil && !updater.postponed && !updater.shouldOffer { updateBanner }
             Group {
                 if ui.page == .antivirus { AntivirusView(model: antivirus).transition(reduceMotion ? .opacity : .opacity.combined(with: .move(edge: .trailing))) }
                 else if ui.page == .applications { ApplicationsView(m: applications).transition(reduceMotion ? .opacity : .opacity.combined(with: .scale(scale: 0.96))) }
@@ -434,6 +434,13 @@ struct ContentView: View {
                 UserDefaults.standard.set(true, forKey: "weeklyAccessGuideSeen-v1")
                 ui.showPermissions = true
             }
+        }
+        .alert(L("s152", updater.available?.version.description ?? ""),
+               isPresented: Binding(get: { updater.shouldOffer }, set: { if !$0 { updater.hideOffer() } })) {
+            Button(L("s322"), role: .cancel) { updater.postpone() }
+            Button(L("s321")) { Task { await updater.install() } }
+        } message: {
+            Text(L("s323"))
         }
         .alert(L("s099"), isPresented: $m.weeklyConfirm) {
             Button(L("s039"), role: .cancel) {}
@@ -488,7 +495,10 @@ struct ContentView: View {
             Image(systemName: "arrow.down.circle").font(.title3)
             VStack(alignment: .leading, spacing: 2) {
                 Text(L("s152", updater.available?.version.description ?? "")).font(.subheadline.weight(.semibold))
-                if let message = updater.message { Text(message).font(.caption).foregroundStyle(.secondary).lineLimit(2) }
+                if let message = updater.message,
+                   message != L("s152", updater.available?.version.description ?? "") {
+                    Text(message).font(.caption).foregroundStyle(.secondary).lineLimit(2)
+                }
             }
             Spacer()
             if updater.busy { ProgressView().controlSize(.small) }
@@ -755,6 +765,13 @@ struct ContentView: View {
                         Spacer()
                         if updater.busy { ProgressView().controlSize(.small) }
                         Button(L("s157")) { Task { await updater.check() } }.disabled(updater.busy)
+                    }
+                    if updater.available != nil {
+                        HStack {
+                            Spacer()
+                            Button(L("s321")) { Task { await updater.install() } }
+                                .disabled(updater.busy).primaryControl()
+                        }
                     }
                 }.padding(18).glassPanel(radius: 18)
                 VStack(alignment: .leading, spacing: 10) {

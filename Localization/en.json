@@ -315,5 +315,8 @@
   "s317": "The database is ready. MacSpace will check for updates again soon.",
   "s318": "Preparing virus definitions. MacSpace will retry automatically.",
   "s319": "Could not move to Trash. Check the macOS authorization.",
-  "s320": "macOS will request administrator authorization for some apps."
+  "s320": "macOS will request administrator authorization for some apps.",
+  "s321": "Update now",
+  "s322": "Later",
+  "s323": "You can install the update later from Settings."
 }

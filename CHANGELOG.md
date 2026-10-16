@@ -1,5 +1,9 @@
 # Changelog
 
+## 3.0.4
+
+- At startup, offer a newer signed release in a dialog with **Update now** and **Later**. After choosing Later, the user can start the update from Settings.
+
 ## 3.0.3
 
 - Retry virus-definition updates automatically after a failure, starting within three seconds and backing off if the service remains unavailable. Keep the existing database usable during temporary update failures.
