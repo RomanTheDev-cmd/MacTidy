@@ -8,6 +8,7 @@ staging=$(mktemp -d)
 trap 'rm -rf "$staging"' EXIT
 mkdir -p "$staging/root/Applications" dist
 /usr/bin/ditto --noextattr --norsrc MacSpace.app "$staging/root/Applications/MacSpace.app"
+if [[ -n "$(/usr/bin/find "$staging/root" ! -perm -o=r -print)" ]]; then print -u2 "Package payload has unreadable files."; exit 1; fi
 mkdir -p "$staging/scripts"
 cat > "$staging/scripts/postinstall" <<'SH'
 #!/bin/sh

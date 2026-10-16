@@ -99,5 +99,10 @@ for locale in Source/*.lproj; do
     cp -R "$locale" "$helper/Contents/Resources/"
     printf '\n"CFBundleDisplayName" = "MacSpace Helper";\n"CFBundleName" = "MacSpace Helper";\n' >> "$helper/Contents/Resources/$(basename "$locale")/InfoPlist.strings"
 done
+# The PKG installs the app as root. Files that only their owner can read (for example a source file
+# saved with mode 600) would leave MacSpace unable to read its own texts and Info.plist.
+/bin/chmod -R u+rwX,go+rX-w MacSpace.app
+unreadable=$(/usr/bin/find MacSpace.app ! -perm -o=r -print)
+if [[ -n "$unreadable" ]]; then print -u2 "Files not readable by everyone:\n$unreadable"; exit 1; fi
 codesign --force --sign - "$helper"
 codesign --force --sign - MacSpace.app

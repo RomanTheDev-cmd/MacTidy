@@ -1,5 +1,10 @@
 # Changelog
 
+## 3.0.5
+
+- Fix the installed app showing internal codes such as "s256" instead of text. Version 3.0.4 was packaged with files only the system could read, so MacSpace could not load its translations or its own version number. The build now makes every file readable and refuses to package unreadable files.
+- Users of 3.0.4 need to install 3.0.5 manually once: its updater cannot read its own version.
+
 ## 3.0.4
 
 - At startup, offer a newer signed release in a dialog with **Update now** and **Later**. After choosing Later, the user can start the update from Settings.
