@@ -1,6 +1,34 @@
 import SwiftUI
 import AppKit
 
+private struct FloatingAppTiles: View {
+    var body: some View {
+        ZStack {
+            Circle().fill(Color.accentColor.opacity(0.08)).frame(width: 205, height: 205)
+            tile("music.note", color: Color(red: 0.46, green: 0.56, blue: 0.98))
+                .rotationEffect(.degrees(-13))
+                .offset(x: -52, y: -40)
+            tile("photo", color: Color(red: 0.27, green: 0.78, blue: 0.79))
+                .rotationEffect(.degrees(12))
+                .offset(x: 57, y: 35)
+            tile("square.grid.2x2.fill", color: .accentColor)
+                .offset(y: -2)
+        }
+        .frame(width: 240, height: 220)
+        .accessibilityHidden(true)
+    }
+
+    private func tile(_ symbol: String, color: Color) -> some View {
+        Image(systemName: symbol)
+            .font(.system(size: 27, weight: .medium))
+            .foregroundStyle(color)
+            .frame(width: 76, height: 76)
+            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: 22, style: .continuous).stroke(color.opacity(0.16)))
+            .shadow(color: color.opacity(0.14), radius: 16, y: 9)
+    }
+}
+
 @MainActor final class ApplicationsModel: ObservableObject {
     @Published var apps: [InstalledApplication] = []
     @Published var selected: Set<String> = []
@@ -15,7 +43,6 @@ import AppKit
     @Published var error: String?
     @Published var confirm = false
     @Published var running: Set<String> = []
-    @Published var unavailable: Set<String> = []
     var worker: Task<ApplicationScan, Error>?
     var generation = UUID()
     var roots: [URL] { [URL(fileURLWithPath: "/Applications"), FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Applications")] }
@@ -34,8 +61,7 @@ import AppKit
     var hiddenCount: Int { selected.subtracting(Set(visible.map(\.id))).count }
     func refreshRunning() {
         running = Set(NSWorkspace.shared.runningApplications.compactMap { $0.bundleURL.map { Scanner.canonical($0).path } })
-        unavailable = Set(apps.filter { !ApplicationScanner.canMoveToTrash($0) }.map(\.id))
-        selected.subtract(running.union(unavailable))
+        selected.subtract(running)
     }
     func cancel() { worker?.cancel(); worker = nil; generation = UUID(); busy = false; status = L("s008") }
     func scan() {
@@ -67,6 +93,7 @@ import AppKit
         let roots = roots; let own = Bundle.main.bundleIdentifier
         Task {
             var removed: Set<String> = []; var failures: [String] = []
+            var privileged: [InstalledApplication] = []
             for app in items {
                 status = L("s010" , app.name); refreshRunning(); let currentRunning = running
                 do {
@@ -75,9 +102,45 @@ import AppKit
                     }.value
                     refreshRunning()
                     guard !running.contains(app.id) else { throw CleanerError(message: L("s012")) }
-                    try await Task.detached(priority: .userInitiated) { try FileManager.default.trashItem(at: url, resultingItemURL: nil) }.value
-                    removed.insert(app.id)
+                    if ApplicationScanner.canMoveToTrash(app) {
+                        do {
+                            try await Task.detached(priority: .userInitiated) { try FileManager.default.trashItem(at: url, resultingItemURL: nil) }.value
+                            removed.insert(app.id)
+                        } catch {
+                            if ApplicationScanner.isPermissionError(error) { privileged.append(app) }
+                            else { throw error }
+                        }
+                    } else { privileged.append(app) }
                 } catch { failures.append("\(app.name): \(error.localizedDescription)") }
+            }
+            if !privileged.isEmpty {
+                refreshRunning()
+                var approved: [InstalledApplication] = []
+                for app in privileged {
+                    do {
+                        let currentRunning = running
+                        _ = try await Task.detached(priority: .userInitiated) {
+                            try ApplicationScanner.validate(app, allowedRoots: roots, runningPaths: currentRunning, ownBundleID: own)
+                        }.value
+                        approved.append(app)
+                    } catch { failures.append("\(app.name): \(error.localizedDescription)") }
+                }
+                if !approved.isEmpty {
+                    do {
+                        let urls = approved.map(\.url)
+                        let trash = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".Trash", isDirectory: true)
+                        let moved = try await Task.detached(priority: .userInitiated) {
+                            let moves = try ApplicationScanner.authorizedMoves(urls, trash: trash)
+                            return try ApplicationScanner.performAuthorizedMoves(moves)
+                        }.value
+                        for app in approved {
+                            if moved.contains(app.id) { removed.insert(app.id) }
+                            else { failures.append("\(app.name): \(L("s319"))") }
+                        }
+                    } catch {
+                        failures.append(contentsOf: approved.map { "\($0.name): \(L("s319"))" })
+                    }
+                }
             }
             apps.removeAll { removed.contains($0.id) }; selected.subtract(removed)
             if let focused, removed.contains(focused) { self.focused = nil }
@@ -91,20 +154,35 @@ struct ApplicationsView: View {
     var body: some View {
         VStack(spacing: 20) {
             if !m.hasScanned && !m.busy {
-                VStack(spacing: 16) {
-                    Spacer()
-                    Image(systemName: "square.grid.2x2.fill")
-                        .font(.system(size: 28, weight: .medium)).foregroundStyle(Color.accentColor)
-                        .frame(width: 68, height: 68).background(Color.accentColor.opacity(0.13), in: Circle())
-                    Text(L("s031")).font(.system(size: 25, weight: .semibold, design: .rounded))
-                    Text(L("s033")).font(.callout).foregroundStyle(.secondary)
-                        .multilineTextAlignment(.center)
-                    Button { m.scan() } label: {
-                        Label(L("s017"), systemImage: "magnifyingglass")
-                            .frame(minWidth: 220).padding(.vertical, 4)
-                    }.primaryControl().controlSize(.large).disabled(m.cleaning)
-                    Spacer()
-                }.frame(maxWidth: .infinity, maxHeight: .infinity).glassPanel(radius: 24)
+                VStack(spacing: 0) {
+                    Spacer(minLength: 0)
+                    HStack(spacing: 26) {
+                        VStack(alignment: .leading, spacing: 0) {
+                            Text(L("s031"))
+                                .font(.system(size: 27, weight: .semibold, design: .rounded))
+                                .fixedSize(horizontal: false, vertical: true)
+                            Text(L("s033"))
+                                .font(.callout).foregroundStyle(.secondary)
+                                .fixedSize(horizontal: false, vertical: true)
+                                .padding(.top, 12)
+                            Button { m.scan() } label: {
+                                Label(L("s017"), systemImage: "magnifyingglass")
+                                    .padding(.horizontal, 14).padding(.vertical, 5)
+                            }
+                            .primaryControl().controlSize(.large).disabled(m.cleaning)
+                            .padding(.top, 28)
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        FloatingAppTiles()
+                    }
+                    .padding(.horizontal, 46).padding(.vertical, 28)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 350)
+                    .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 30, style: .continuous))
+                    .overlay(RoundedRectangle(cornerRadius: 30, style: .continuous).stroke(Color.primary.opacity(0.07)))
+                    .shadow(color: .black.opacity(0.055), radius: 22, y: 10)
+                    Spacer(minLength: 0)
+                }.frame(maxWidth: .infinity, maxHeight: .infinity)
             } else {
                 HStack(spacing: 12) {
                     Text(L("s026", m.visible.count)).font(.title2.weight(.semibold))
@@ -174,7 +252,7 @@ struct ApplicationsView: View {
                     Spacer()
                     Button(L("s027")) {
                         m.refreshRunning()
-                        m.selected.formUnion(m.visible.filter { !m.running.contains($0.id) && !m.unavailable.contains($0.id) }.map(\.id))
+                        m.selected.formUnion(m.visible.filter { !m.running.contains($0.id) }.map(\.id))
                     }.disabled(m.visible.isEmpty || m.cleaning)
                     if !m.selected.isEmpty {
                         Button(L("s028")) { m.selected = [] }.disabled(m.cleaning)
@@ -192,7 +270,8 @@ struct ApplicationsView: View {
             Button(L("s039"), role: .cancel) {}
             Button(L("s040"), role: .destructive) { m.trash() }
         } message: {
-            Text(L("s041", m.selected.count, bytes(m.pickedSize), m.hiddenCount))
+            Text(L("s041", m.selected.count, bytes(m.pickedSize), m.hiddenCount) +
+                 (m.picked.contains { !ApplicationScanner.canMoveToTrash($0) } ? "\n\n" + L("s320") : ""))
         }
         .alert(L("s042"), isPresented: Binding(get: { m.error != nil }, set: { if !$0 { m.error = nil } })) {
             Button(L("s043")) { m.error = nil }
@@ -200,7 +279,7 @@ struct ApplicationsView: View {
     }
     private func appRow(_ app: InstalledApplication) -> some View {
         HStack(spacing: 12) {
-            Toggle(L("s044" , app.name), isOn: Binding(get: { m.selected.contains(app.id) }, set: { if $0 { m.selected.insert(app.id) } else { m.selected.remove(app.id) } })).labelsHidden().toggleStyle(.checkbox).disabled(m.running.contains(app.id) || m.unavailable.contains(app.id) || m.cleaning)
+            Toggle(L("s044" , app.name), isOn: Binding(get: { m.selected.contains(app.id) }, set: { if $0 { m.selected.insert(app.id) } else { m.selected.remove(app.id) } })).labelsHidden().toggleStyle(.checkbox).disabled(m.running.contains(app.id) || m.cleaning)
             Image(nsImage: NSWorkspace.shared.icon(forFile: app.url.path)).resizable().frame(width: 36, height: 36)
             VStack(alignment: .leading, spacing: 4) {
                 Text(app.name).font(.system(size: 13, weight: .medium)).lineLimit(1)
@@ -210,7 +289,7 @@ struct ApplicationsView: View {
             VStack(alignment: .trailing, spacing: 4) {
                 Text(bytes(app.entry.size)).font(.system(size: 12, weight: .semibold))
                 if m.running.contains(app.id) { Text(L("s047")).font(.caption2).foregroundStyle(.secondary) }
-                else if m.unavailable.contains(app.id) { Text(L("s196")).font(.caption2).foregroundStyle(.secondary) }
+                else if !ApplicationScanner.canMoveToTrash(app) { Text(L("s196")).font(.caption2).foregroundStyle(.secondary) }
             }
         }.padding(10).contentShape(Rectangle()).background(m.focused == app.id ? Brand.blue.opacity(0.16) : (m.selected.contains(app.id) ? Brand.blue.opacity(0.07) : .clear), in: RoundedRectangle(cornerRadius: 10))
             .animation(.easeOut(duration: 0.15), value: m.selected.contains(app.id))

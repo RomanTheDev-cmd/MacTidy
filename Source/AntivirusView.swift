@@ -63,10 +63,6 @@ struct AntivirusView: View {
                     .buttonStyle(.bordered).controlSize(.small).fixedSize()
                     .help(L("s269")).accessibilityLabel(L("s269"))
                 }
-                if model.error != nil && !model.updating {
-                    Button(L("s275")) { Task { await model.updateDefinitions() } }
-                        .buttonStyle(.borderless).font(.caption).disabled(model.scanning)
-                }
                 Text(L("s270")).font(.caption).foregroundStyle(.secondary).multilineTextAlignment(.center)
                     .frame(maxWidth: 620)
                 Link(L("s274"), destination: URL(string: "https://github.com/Cisco-Talos/clamav/releases/tag/clamav-\(AntivirusEngine.release)")!)
@@ -162,7 +158,7 @@ struct AntivirusView: View {
                 Spacer()
                 if model.scanPhase == .scanning,
                    let remaining = AntivirusScanProgress.estimatedSecondsRemaining(
-                    scanned: model.scannedFiles, total: model.estimatedFiles, elapsed: model.elapsedSeconds) {
+                    scanned: model.scannedFiles, total: model.estimatedFiles, elapsed: model.scanElapsedSeconds) {
                     Text(L("s296", duration(remaining)))
                 } else { Text(L("s297")) }
             }

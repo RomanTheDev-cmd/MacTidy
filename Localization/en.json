@@ -194,7 +194,7 @@
   "s193": "GB",
   "s194": "{0} files · {1}. Only the selected personal files will move to Trash. You can restore them there.",
   "s195": "Combined selection",
-  "s196": "Additional permissions required",
+  "s196": "macOS authorization required to move",
   "s197": "Close",
   "s198": "Where the space went",
   "s199": "Explore the largest folders on this Mac",
@@ -311,5 +311,9 @@
   "s313": "MacSpace is free. If you'd like to support development with a donation, message the author on Telegram.",
   "s314": "Message on Telegram",
   "s315": "Thank you for using MacSpace!",
-  "s316": "The folder changed after the scan — its app is probably open. Quit the app and scan again."
+  "s316": "The folder changed after the scan — its app is probably open. Quit the app and scan again.",
+  "s317": "The database is ready. MacSpace will check for updates again soon.",
+  "s318": "Preparing virus definitions. MacSpace will retry automatically.",
+  "s319": "Could not move to Trash. Check the macOS authorization.",
+  "s320": "macOS will request administrator authorization for some apps."
 }

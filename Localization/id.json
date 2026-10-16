@@ -194,7 +194,7 @@
   "s193": "GB",
   "s194": "{0} file · {1}. Hanya file pribadi yang dipilih akan dipindahkan ke Sampah. Anda dapat memulihkannya di sana.",
   "s195": "Pilihan gabungan",
-  "s196": "Memerlukan izin tambahan",
+  "s196": "macOS akan meminta izin untuk memindahkan",
   "s197": "Tutup",
   "s198": "Penggunaan ruang disk",
   "s199": "Jelajahi folder terbesar di Mac ini",
@@ -311,5 +311,9 @@
   "s313": "MacSpace gratis. Jika ingin mendukung pengembangan dengan donasi, hubungi pembuatnya di Telegram.",
   "s314": "Kirim pesan di Telegram",
   "s315": "Terima kasih telah menggunakan MacSpace!",
-  "s316": "Folder berubah setelah pemindaian — kemungkinan aplikasinya sedang terbuka. Tutup aplikasi lalu pindai lagi."
+  "s316": "Folder berubah setelah pemindaian — kemungkinan aplikasinya sedang terbuka. Tutup aplikasi lalu pindai lagi.",
+  "s317": "Basis data siap. MacSpace akan segera memeriksa pembaruan lagi.",
+  "s318": "Menyiapkan basis data virus. MacSpace akan mencoba lagi secara otomatis.",
+  "s319": "Tidak dapat memindahkan ke Sampah. Periksa izin macOS.",
+  "s320": "macOS akan meminta izin administrator untuk beberapa aplikasi."
 }

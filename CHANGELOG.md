@@ -1,5 +1,12 @@
 # Changelog
 
+## 3.0.3
+
+- Retry virus-definition updates automatically after a failure, starting within three seconds and backing off if the service remains unavailable. Keep the existing database usable during temporary update failures.
+- Estimate antivirus scan time from the scanning phase after enough files have been checked, avoiding misleading early estimates.
+- Let users select third-party apps installed in protected folders. When ordinary Trash access is denied, request macOS administrator authorization once for the selected batch and move the apps to the user's Trash.
+- Refine the main-window layout and application review interface.
+
 ## 3.0.2
 
 - Move app review into the main window: **Applications** is now a tab next to Cleanup and Antivirus instead of a separate window opened from the More menu. Buttons in Storage by Type open this tab.

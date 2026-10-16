@@ -194,7 +194,7 @@
   "s193": "GB",
   "s194": "{0} tệp · {1}. Chỉ các tệp cá nhân đã chọn được chuyển vào Thùng rác. Bạn có thể khôi phục chúng.",
   "s195": "Kết hợp nhiều loại",
-  "s196": "Cần thêm quyền truy cập",
+  "s196": "macOS sẽ yêu cầu xác nhận để chuyển",
   "s197": "Đóng",
   "s198": "Dung lượng được dùng ở đâu",
   "s199": "Khám phá các thư mục lớn nhất trên máy Mac này",
@@ -311,5 +311,9 @@
   "s313": "MacSpace miễn phí. Nếu bạn muốn ủng hộ phát triển bằng một khoản quyên góp, hãy nhắn cho tác giả trên Telegram.",
   "s314": "Nhắn tin qua Telegram",
   "s315": "Cảm ơn bạn đã sử dụng MacSpace!",
-  "s316": "Thư mục đã thay đổi sau khi quét — có thể ứng dụng của nó đang mở. Hãy thoát ứng dụng và quét lại."
+  "s316": "Thư mục đã thay đổi sau khi quét — có thể ứng dụng của nó đang mở. Hãy thoát ứng dụng và quét lại.",
+  "s317": "Cơ sở dữ liệu đã sẵn sàng. MacSpace sẽ sớm kiểm tra bản cập nhật lần nữa.",
+  "s318": "Đang chuẩn bị cơ sở dữ liệu virus. MacSpace sẽ tự động thử lại.",
+  "s319": "Không thể chuyển vào Thùng rác. Hãy kiểm tra quyền macOS.",
+  "s320": "macOS sẽ yêu cầu xác nhận của quản trị viên cho một số ứng dụng."
 }

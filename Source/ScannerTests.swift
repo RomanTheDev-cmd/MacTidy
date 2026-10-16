@@ -2,6 +2,19 @@ import Foundation
 import CryptoKit
 func blockOn(_ gate: DispatchSemaphore) { gate.wait() }
 
+final class DefinitionUpdateProbe: @unchecked Sendable {
+    private let lock = NSLock()
+    private var attempts = 0
+    func run() throws -> String {
+        lock.lock()
+        attempts += 1
+        let current = attempts
+        lock.unlock()
+        if current == 1 { throw AntivirusError.definitionsMissing }
+        return "updated"
+    }
+}
+
 @main struct Tests {
     static var count = 0
     static func check(_ value: Bool, _ name: String) {
@@ -36,9 +49,23 @@ func blockOn(_ gate: DispatchSemaphore) { gate.wait() }
         check(AntivirusEngine.isTimeMachineDrive(driveRoot), "Time Machine backup drive is not scanned")
         try? FileManager.default.removeItem(at: driveRoot)
         check(AntivirusEngine.externalDrives().allSatisfy { $0.path.hasPrefix("/Volumes/") }, "startup disk is not listed as an external drive")
-        check(AntivirusScanProgress.estimatedSecondsRemaining(scanned: 100, total: 200, elapsed: 30) == 30 &&
-              AntivirusScanProgress.estimatedSecondsRemaining(scanned: 0, total: 200, elapsed: 30) == nil,
-              "remaining scan time is estimated only after measurable progress")
+        check(AntivirusScanProgress.estimatedSecondsRemaining(scanned: 1_000, total: 2_000, elapsed: 30) == 30 &&
+              AntivirusScanProgress.estimatedSecondsRemaining(scanned: 138, total: 792_346, elapsed: 2) == nil,
+              "remaining scan time waits for a stable scanning sample")
+        check(AntivirusUpdatePolicy.retryDelay(after: 1) == 3_000_000_000 &&
+              AntivirusUpdatePolicy.retryDelay(after: 2) == 10_000_000_000 &&
+              AntivirusUpdatePolicy.retryDelay(after: 20) == 300_000_000_000,
+              "virus definitions retry quickly and back off after repeated failures")
+        let updateProbe = DefinitionUpdateProbe()
+        let updateModel = AntivirusModel(definitionUpdater: { try updateProbe.run() })
+        let firstUpdate = await updateModel.refreshCycle(failures: 0)
+        check(firstUpdate.failures == 1 && firstUpdate.delay == 3_000_000_000 &&
+              updateModel.error == nil,
+              "failed virus definition update schedules retry without showing an error")
+        let secondUpdate = await updateModel.refreshCycle(failures: firstUpdate.failures)
+        check(secondUpdate.failures == 0 && secondUpdate.delay == 2 * 60 * 60 * 1_000_000_000 &&
+              updateModel.lastUpdated != nil,
+              "successful virus definition retry restores the regular interval")
         let sampleScan = AntivirusScanRecord(id: UUID(), startedAt: Date(), finishedAt: Date(), scannedFiles: 42,
                                              outcome: .finished, findings: [AntivirusHistoryFinding(path: "/tmp/sample", signature: "Test")])
         let decodedScan = try JSONDecoder().decode(AntivirusScanRecord.self, from: JSONEncoder().encode(sampleScan))
@@ -54,7 +81,7 @@ func blockOn(_ gate: DispatchSemaphore) { gate.wait() }
         check(scanControl.isStopped && stoppable.terminationStatus != 0, "stopping a scan terminates its child process")
         let catalogs = URL(fileURLWithPath: ProcessInfo.processInfo.environment["MACTIDY_LOCALIZATION_DIR"]!)
         let english = AppLocalization.shared.english
-        check(english.count == 313, "English fallback is complete")
+        check(english.count == 317, "English fallback is complete")
         for url in try FileManager.default.contentsOfDirectory(at: catalogs, includingPropertiesForKeys: nil) where url.pathExtension == "json" {
             let catalog = try JSONDecoder().decode([String: String].self, from: Data(contentsOf: url))
             check(Set(catalog.keys) == Set(english.keys) && english.allSatisfy { AppLocalization.tokens($0.value) == AppLocalization.tokens(catalog[$0.key] ?? "") }, "catalog keys and placeholders: " + url.lastPathComponent)
@@ -318,12 +345,30 @@ func blockOn(_ gate: DispatchSemaphore) { gate.wait() }
         _ = try ApplicationScanner.validate(example, allowedRoots: [appsRoot], runningPaths: [], ownBundleID: "other.app")
         check(ApplicationScanner.canMoveToTrash(example), "writable app in writable folder is removable")
         try fm.setAttributes([.posixPermissions: 0o555], ofItemAtPath: appURL.path)
-        check(!ApplicationScanner.canMoveToTrash(example), "read-only app is not offered for cleanup")
-        rejects("read-only app is rejected before Trash") { _ = try ApplicationScanner.validate(example, allowedRoots: [appsRoot], runningPaths: [], ownBundleID: nil) }
+        check(ApplicationScanner.canMoveToTrash(example), "read-only app in writable folder remains removable")
+        _ = try ApplicationScanner.validate(example, allowedRoots: [appsRoot], runningPaths: [], ownBundleID: nil)
         try fm.setAttributes([.posixPermissions: 0o755], ofItemAtPath: appURL.path)
         try fm.setAttributes([.posixPermissions: 0o555], ofItemAtPath: appsRoot.path)
-        check(!ApplicationScanner.canMoveToTrash(example), "app in read-only folder is not offered for cleanup")
+        check(!ApplicationScanner.canMoveToTrash(example), "app in read-only folder needs macOS authorization")
+        _ = try ApplicationScanner.validate(example, allowedRoots: [appsRoot], runningPaths: [], ownBundleID: nil)
         try fm.setAttributes([.posixPermissions: 0o755], ofItemAtPath: appsRoot.path)
+        let scriptedApp = appsRoot.appendingPathComponent("Script Case.app")
+        try fm.createDirectory(at: scriptedApp, withIntermediateDirectories: true)
+        let secondScriptedApp = appsRoot.appendingPathComponent("Script Case Two.app")
+        try fm.createDirectory(at: secondScriptedApp, withIntermediateDirectories: true)
+        let testTrash = root.appendingPathComponent("TestTrash")
+        let scriptedMoves = try ApplicationScanner.authorizedMoves([scriptedApp, secondScriptedApp], trash: testTrash)
+        let scriptedResult = try ApplicationScanner.performAuthorizedMoves(scriptedMoves, elevated: false)
+        check(scriptedResult == Set([scriptedApp.path, secondScriptedApp.path]) &&
+              scriptedMoves.allSatisfy { fm.fileExists(atPath: $0.destination.path) },
+              "built-in move script handles a selected batch with one authorization")
+        let staleApp = appsRoot.appendingPathComponent("Stale.app")
+        try fm.createDirectory(at: staleApp, withIntermediateDirectories: true)
+        let validMove = try ApplicationScanner.authorizedMoves([staleApp], trash: testTrash)[0]
+        let wrongIdentity = ApplicationScanner.AuthorizedMove(source: validMove.source,
+                         destination: validMove.destination, identity: "0:0")
+        check(try ApplicationScanner.performAuthorizedMoves([wrongIdentity], elevated: false).isEmpty &&
+              fm.fileExists(atPath: staleApp.path), "authorized app move rejects a changed item")
         rejects("running app cannot be removed") { _ = try ApplicationScanner.validate(example, allowedRoots: [appsRoot], runningPaths: [example.id], ownBundleID: nil) }
         rejects("app outside allowed roots cannot be removed") { _ = try ApplicationScanner.validate(example, allowedRoots: [root.appendingPathComponent("Elsewhere")], runningPaths: [], ownBundleID: nil) }
         rejects("MacTidy cannot remove itself") { _ = try ApplicationScanner.validate(example, allowedRoots: [appsRoot], runningPaths: [], ownBundleID: "test.example") }

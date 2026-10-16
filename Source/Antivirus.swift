@@ -33,9 +33,18 @@ struct AntivirusScanProgress {
     let foundThreats: Int
 
     static func estimatedSecondsRemaining(scanned: Int, total: Int, elapsed: TimeInterval) -> TimeInterval? {
-        guard scanned >= 50, total > scanned, elapsed >= 10 else { return nil }
+        // Early samples are dominated by startup work and large files; avoid displaying wild estimates.
+        guard scanned >= 1_000, total > scanned, elapsed >= 30 else { return nil }
         let estimate = elapsed * Double(total - scanned) / Double(scanned)
         return estimate.isFinite && estimate < 7 * 24 * 3600 ? estimate : nil
+    }
+}
+
+enum AntivirusUpdatePolicy {
+    // Retry transient connection and mirror failures soon, then back off to avoid hammering the server.
+    static func retryDelay(after failures: Int) -> UInt64 {
+        let seconds: [UInt64] = [3, 10, 30, 60, 300]
+        return seconds[min(max(failures - 1, 0), seconds.count - 1)] * 1_000_000_000
     }
 }
 
@@ -377,13 +386,17 @@ enum AntivirusEngine {
     @Published var scannedFiles = 0
     @Published var estimatedFiles = 0
     @Published var elapsedSeconds: TimeInterval = 0
+    @Published var scanElapsedSeconds: TimeInterval = 0
     @Published var stopping = false
     @Published var pendingRemoval: AntivirusFinding?
     @Published var error: String?
+    private let definitionUpdater: () throws -> String
     private var scanID: UUID?
+    private var scanBeganAt: Date?
     private var elapsedTask: Task<Void, Never>?
 
-    init() {
+    init(definitionUpdater: @escaping () throws -> String = AntivirusEngine.updateDefinitions) {
+        self.definitionUpdater = definitionUpdater
         ready = FileManager.default.isExecutableFile(atPath: AntivirusEngine.scanner.path) && AntivirusEngine.hasDefinitions
         if let files = try? FileManager.default.contentsOfDirectory(at: AntivirusEngine.database, includingPropertiesForKeys: [.contentModificationDateKey]),
            let date = files.compactMap({ try? $0.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate }).max() {
@@ -392,32 +405,49 @@ enum AntivirusEngine {
     }
 
     func maintainDefinitions() async {
+        var failures = 0
         while !Task.isCancelled {
-            if !scanning { await updateDefinitions() }
+            let delay: UInt64
+            if scanning {
+                delay = Self.scanRetryInterval
+            } else {
+                let cycle = await refreshCycle(failures: failures)
+                failures = cycle.failures
+                delay = cycle.delay
+            }
             do {
-                try await Task.sleep(nanoseconds: scanning ? Self.scanRetryInterval : Self.updateInterval)
+                try await Task.sleep(nanoseconds: delay)
             } catch { return }
         }
     }
 
-    func updateDefinitions() async {
-        guard !updating else { return }
+    func refreshCycle(failures: Int) async -> (delay: UInt64, failures: Int) {
+        if await updateDefinitions() { return (Self.updateInterval, 0) }
+        let nextFailures = failures + 1
+        return (AntivirusUpdatePolicy.retryDelay(after: nextFailures), nextFailures)
+    }
+
+    @discardableResult func updateDefinitions() async -> Bool {
+        guard !updating else { return false }
         updating = true
         error = nil
         status = L("s257")
         do {
-            _ = try await Task.detached(priority: .utility) {
-                try AntivirusEngine.updateDefinitions()
+            _ = try await Task.detached(priority: .utility) { [definitionUpdater] in
+                try definitionUpdater()
             }.value
             ready = true
             lastUpdated = Date()
             status = L("s258")
+            updating = false
+            return true
         } catch {
-            ready = AntivirusEngine.hasDefinitions
-            self.error = error.localizedDescription
-            status = ready ? L("s259") : L("s260")
+            ready = FileManager.default.isExecutableFile(atPath: AntivirusEngine.scanner.path) && AntivirusEngine.hasDefinitions
+            status = ready ? L("s317") : L("s318")
+            NSLog("MacSpace definition update will retry: %@", error.localizedDescription)
+            updating = false
+            return false
         }
-        updating = false
     }
 
     func scan() {
@@ -432,6 +462,8 @@ enum AntivirusEngine {
         scannedFiles = 0
         estimatedFiles = 0
         elapsedSeconds = 0
+        scanElapsedSeconds = 0
+        scanBeganAt = nil
         findings = []
         error = nil
         status = L("s261")
@@ -441,6 +473,9 @@ enum AntivirusEngine {
                 try? await Task.sleep(nanoseconds: 1_000_000_000)
                 guard let self, self.scanID == id, self.scanning else { return }
                 self.elapsedSeconds = Date().timeIntervalSince(startedAt)
+                if let scanBeganAt = self.scanBeganAt {
+                    self.scanElapsedSeconds = Date().timeIntervalSince(scanBeganAt)
+                }
             }
         }
         Task { [self] in
@@ -449,6 +484,9 @@ enum AntivirusEngine {
                     try AntivirusEngine.scanComputer(onProgress: { progress in
                         Task { @MainActor [weak self] in
                             guard let self, self.scanID == id else { return }
+                            if progress.phase == .scanning && self.scanBeganAt == nil {
+                                self.scanBeganAt = Date()
+                            }
                             self.scanPhase = progress.phase
                             self.countedFiles = progress.countedFiles
                             self.scannedFiles = max(self.scannedFiles, progress.scannedFiles)
@@ -487,6 +525,8 @@ enum AntivirusEngine {
             }
             elapsedTask?.cancel()
             elapsedSeconds = Date().timeIntervalSince(startedAt)
+            if let scanBeganAt { scanElapsedSeconds = Date().timeIntervalSince(scanBeganAt) }
+            scanBeganAt = nil
             scanID = nil
             stopping = false
             scanning = false

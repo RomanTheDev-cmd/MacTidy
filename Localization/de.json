@@ -194,7 +194,7 @@
   "s193": "GB",
   "s194": "{0} Dateien · {1}. Nur die ausgewählten persönlichen Dateien werden in den Papierkorb verschoben. Sie können dort wiederhergestellt werden.",
   "s195": "Kombinierte Auswahl",
-  "s196": "Zusätzliche Berechtigungen erforderlich",
+  "s196": "Zum Verschieben ist eine macOS-Bestätigung nötig",
   "s197": "Schließen",
   "s198": "Speicherplatz im Detail",
   "s199": "Die größten Ordner auf diesem Mac erkunden",
@@ -311,5 +311,9 @@
   "s313": "MacSpace ist kostenlos. Wenn du die Entwicklung mit einer Spende unterstützen möchtest, schreib dem Autor auf Telegram.",
   "s314": "Auf Telegram schreiben",
   "s315": "Danke, dass du MacSpace nutzt!",
-  "s316": "Der Ordner hat sich nach der Analyse geändert – die zugehörige App ist vermutlich geöffnet. Beende die App und analysiere erneut."
+  "s316": "Der Ordner hat sich nach der Analyse geändert – die zugehörige App ist vermutlich geöffnet. Beende die App und analysiere erneut.",
+  "s317": "Die Datenbank ist bereit. MacSpace sucht bald erneut nach Updates.",
+  "s318": "Virendefinitionen werden vorbereitet. MacSpace versucht es automatisch erneut.",
+  "s319": "Verschieben in den Papierkorb fehlgeschlagen. Prüfen Sie die macOS-Bestätigung.",
+  "s320": "Für einige Apps fordert macOS eine Administratorbestätigung an."
 }

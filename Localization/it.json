@@ -194,7 +194,7 @@
   "s193": "GB",
   "s194": "{0} file · {1}. Solo i file personali selezionati verranno spostati nel Cestino. Potrai ripristinarli.",
   "s195": "Selezione combinata",
-  "s196": "Servono autorizzazioni aggiuntive",
+  "s196": "macOS chiederà l'autorizzazione per spostarla",
   "s197": "Chiudi",
   "s198": "Cosa occupa spazio",
   "s199": "Esplora le cartelle più grandi su questo Mac",
@@ -311,5 +311,9 @@
   "s313": "MacSpace è gratuito. Se vuoi sostenere lo sviluppo con una donazione, scrivi all'autore su Telegram.",
   "s314": "Scrivi su Telegram",
   "s315": "Grazie per usare MacSpace!",
-  "s316": "La cartella è cambiata dopo l'analisi: probabilmente la sua app è aperta. Chiudi l'app e ripeti l'analisi."
+  "s316": "La cartella è cambiata dopo l'analisi: probabilmente la sua app è aperta. Chiudi l'app e ripeti l'analisi.",
+  "s317": "Il database è pronto. MacSpace cercherà presto nuovi aggiornamenti.",
+  "s318": "Preparazione delle definizioni antivirus. MacSpace riproverà automaticamente.",
+  "s319": "Impossibile spostare nel Cestino. Controlla l'autorizzazione di macOS.",
+  "s320": "macOS chiederà l'autorizzazione dell'amministratore per alcune app."
 }

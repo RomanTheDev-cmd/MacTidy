@@ -194,7 +194,7 @@
   "s193": "GB",
   "s194": "{0} archivos · {1}. Solo los archivos personales seleccionados se moverán a la Papelera. Puedes restaurarlos allí.",
   "s195": "Selección combinada",
-  "s196": "Se requieren permisos adicionales",
+  "s196": "macOS pedirá autorización para moverla",
   "s197": "Cerrar",
   "s198": "Dónde se usa el espacio",
   "s199": "Explora las carpetas más grandes de este Mac",
@@ -311,5 +311,9 @@
   "s313": "MacSpace es gratis. Si quieres apoyar el desarrollo con una donación, escribe al autor en Telegram.",
   "s314": "Escribir en Telegram",
   "s315": "¡Gracias por usar MacSpace!",
-  "s316": "La carpeta cambió después del análisis; probablemente su app está abierta. Cierra la app y vuelve a analizar."
+  "s316": "La carpeta cambió después del análisis; probablemente su app está abierta. Cierra la app y vuelve a analizar.",
+  "s317": "La base de datos está lista. MacSpace volverá a buscar actualizaciones pronto.",
+  "s318": "Preparando las definiciones de virus. MacSpace volverá a intentarlo automáticamente.",
+  "s319": "No se pudo mover a la Papelera. Comprueba la autorización de macOS.",
+  "s320": "macOS pedirá autorización de administrador para algunas apps."
 }

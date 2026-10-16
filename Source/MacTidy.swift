@@ -1,5 +1,6 @@
 import SwiftUI
 import AppKit
+import QuartzCore
 
 func bytes(_ n: Int64) -> String {
     let f = ByteCountFormatter(); f.countStyle = .file; f.zeroPadsFractionDigits = false
@@ -20,8 +21,10 @@ extension View {
 }
 enum Brand {
     static let blue = Color.accentColor
-    static let ring = AngularGradient(colors: [Color(red: 0.0, green: 0.48, blue: 1.0), Color(red: 0.35, green: 0.78, blue: 0.98),
-                                                Color(red: 0.0, green: 0.48, blue: 1.0)], center: .center)
+    static let ring = AngularGradient(colors: [Color(red: 0.30, green: 0.69, blue: 1.0),
+                                                Color(red: 0.30, green: 0.84, blue: 0.91),
+                                                Color(red: 0.39, green: 0.52, blue: 0.98),
+                                                Color(red: 0.30, green: 0.69, blue: 1.0)], center: .center)
     static let spring = Animation.spring(response: 0.35, dampingFraction: 0.86)
     static let telegram = URL(string: "https://t.me/R_3Design")!
 }
@@ -32,6 +35,7 @@ struct GraphiteButtonStyle: ButtonStyle {
 private struct ProminentButton: View {
     let configuration: ButtonStyle.Configuration
     @Environment(\.isEnabled) private var enabled
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     private let hovering = State(initialValue: false)
     var body: some View {
         configuration.label.font(.system(size: 13, weight: .semibold))
@@ -39,25 +43,122 @@ private struct ProminentButton: View {
             .padding(.horizontal, 18).padding(.vertical, 10)
             .background(enabled ? AnyShapeStyle(Color.accentColor) : AnyShapeStyle(Color.primary.opacity(0.08)), in: Capsule())
             .brightness(hovering.wrappedValue && !configuration.isPressed ? 0.05 : 0)
-            .scaleEffect(configuration.isPressed ? 0.97 : 1)
-            .animation(Brand.spring, value: configuration.isPressed)
+            .scaleEffect(!reduceMotion && configuration.isPressed ? 0.97 : 1)
+            .animation(reduceMotion ? nil : Brand.spring, value: configuration.isPressed)
             .animation(.easeOut(duration: 0.15), value: hovering.wrappedValue)
             .onHover { hovering.wrappedValue = enabled && $0 }
     }
 }
+/// A soft, static color wash keeps the window light without continuously redrawing large blurs.
+struct AmbientBackdrop: View {
+    var body: some View {
+        GeometryReader { geometry in
+            ZStack {
+                Color(nsColor: .windowBackgroundColor)
+                Circle()
+                    .fill(Color(red: 0.31, green: 0.68, blue: 1).opacity(0.20))
+                    .frame(width: 340, height: 340).blur(radius: 85)
+                    .position(x: geometry.size.width * 0.18, y: geometry.size.height * 0.17)
+                Circle()
+                    .fill(Color(red: 0.55, green: 0.48, blue: 0.96).opacity(0.14))
+                    .frame(width: 330, height: 330).blur(radius: 90)
+                    .position(x: geometry.size.width * 0.87, y: geometry.size.height * 0.84)
+                Circle()
+                    .fill(Color(red: 0.28, green: 0.82, blue: 0.82).opacity(0.12))
+                    .frame(width: 220, height: 220).blur(radius: 75)
+                    .position(x: geometry.size.width * 0.71, y: geometry.size.height * 0.23)
+            }
+        }
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
+    }
+}
+/// Core Animation moves only a tiny layer, leaving SwiftUI's text and gauge idle.
+private final class OrbitingDotView: NSView {
+    private let orbit = CALayer()
+    private let dot = CALayer()
+
+    override init(frame frameRect: NSRect) {
+        super.init(frame: frameRect)
+        wantsLayer = true
+        dot.backgroundColor = NSColor.white.withAlphaComponent(0.9).cgColor
+        dot.cornerRadius = 2.5
+        dot.shadowColor = NSColor.systemBlue.cgColor
+        dot.shadowOpacity = 0.65
+        dot.shadowRadius = 7
+        orbit.addSublayer(dot)
+        layer?.addSublayer(orbit)
+    }
+
+    required init?(coder: NSCoder) { nil }
+
+    override func layout() {
+        super.layout()
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        orbit.bounds = bounds
+        orbit.position = CGPoint(x: bounds.midX, y: bounds.midY)
+        dot.frame = CGRect(x: bounds.midX - 2.5, y: bounds.midY + 95.5, width: 5, height: 5)
+        CATransaction.commit()
+    }
+
+    func setActive(_ active: Bool) {
+        if active && orbit.animation(forKey: "orbit") == nil {
+            let animation = CABasicAnimation(keyPath: "transform.rotation.z")
+            animation.fromValue = 0
+            animation.toValue = 2 * Double.pi
+            animation.duration = 19
+            animation.repeatCount = .infinity
+            animation.timingFunction = CAMediaTimingFunction(name: .linear)
+            orbit.add(animation, forKey: "orbit")
+        } else if !active {
+            orbit.removeAnimation(forKey: "orbit")
+        }
+    }
+}
+
+private struct OrbitingDot: NSViewRepresentable {
+    let active: Bool
+
+    func makeNSView(context: Context) -> OrbitingDotView { OrbitingDotView(frame: NSRect(x: 0, y: 0, width: 200, height: 200)) }
+    func updateNSView(_ view: OrbitingDotView, context: Context) { view.setActive(active) }
+}
+
+private struct RingAccents: View {
+    let motionEnabled: Bool
+
+    var body: some View {
+        ZStack {
+            OrbitingDot(active: motionEnabled).frame(width: 200, height: 200).allowsHitTesting(false)
+            Image(systemName: "sparkle")
+                .font(.system(size: 13, weight: .light))
+                .foregroundStyle(Color(red: 0.45, green: 0.55, blue: 0.96).opacity(0.65))
+                .offset(x: 118, y: -72)
+            Circle()
+                .fill(Color(red: 0.27, green: 0.80, blue: 0.83).opacity(0.55))
+                .frame(width: 6, height: 6)
+                .offset(x: -113, y: 65)
+        }
+        .accessibilityHidden(true)
+    }
+}
+
 /// Free-space gauge in the style of macOS storage: the ring fills smoothly when it appears or the disk changes.
 struct StorageRing: View {
     let used: Int64
     let total: Int64
     let available: Int64
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.scenePhase) private var scenePhase
     private let shown = State(initialValue: 0.0)
     private var fraction: Double { total > 0 ? min(1, max(0, Double(used) / Double(total))) : 0 }
     var body: some View {
         ZStack {
-            Circle().stroke(Color.primary.opacity(0.07), lineWidth: 14)
+            Circle().stroke(Color.primary.opacity(0.065), lineWidth: 13)
             Circle().trim(from: 0, to: shown.wrappedValue)
-                .stroke(Brand.ring, style: StrokeStyle(lineWidth: 14, lineCap: .round))
+                .stroke(Brand.ring, style: StrokeStyle(lineWidth: 13, lineCap: .round))
                 .rotationEffect(.degrees(-90))
+            RingAccents(motionEnabled: !reduceMotion && scenePhase == .active)
             VStack(spacing: 3) {
                 Text(bytes(available)).font(.system(size: 32, weight: .semibold, design: .rounded)).monospacedDigit()
                     .minimumScaleFactor(0.6).lineLimit(1)
@@ -66,9 +167,39 @@ struct StorageRing: View {
             }.padding(.horizontal, 26)
         }
         .frame(width: 200, height: 200)
-        .onAppear { withAnimation(.easeOut(duration: 1.0).delay(0.15)) { shown.wrappedValue = fraction } }
-        .onChange(of: fraction) { value in withAnimation(.easeInOut(duration: 0.6)) { shown.wrappedValue = value } }
+        .onAppear {
+            if reduceMotion { shown.wrappedValue = fraction }
+            else { withAnimation(.easeOut(duration: 1.0).delay(0.15)) { shown.wrappedValue = fraction } }
+        }
+        .onChange(of: fraction) { value in
+            if reduceMotion { shown.wrappedValue = value }
+            else { withAnimation(.easeInOut(duration: 0.6)) { shown.wrappedValue = value } }
+        }
         .accessibilityElement(children: .combine)
+    }
+}
+private struct NavigationPill: View {
+    let title: String
+    let symbol: String
+    let selected: Bool
+    let action: () -> Void
+    private let hovering = State(initialValue: false)
+
+    var body: some View {
+        Button(action: action) {
+            Label(title, systemImage: symbol)
+                .font(.system(size: 13, weight: selected ? .semibold : .medium))
+                .foregroundStyle(selected ? Color.accentColor : Color.secondary)
+                .padding(.horizontal, 18).frame(height: 38)
+                .background(selected ? Color.accentColor.opacity(0.13) : Color.primary.opacity(hovering.wrappedValue ? 0.05 : 0),
+                            in: Capsule())
+                .overlay(Capsule().stroke(selected ? Color.accentColor.opacity(0.16) : Color.clear, lineWidth: 1))
+                .contentShape(Capsule())
+        }
+        .buttonStyle(.plain)
+        .onHover { hovering.wrappedValue = $0 }
+        .animation(.easeOut(duration: 0.18), value: selected)
+        .animation(.easeOut(duration: 0.18), value: hovering.wrappedValue)
     }
 }
 /// Rounded tinted square with an SF Symbol, like the icons in System Settings.
@@ -256,6 +387,7 @@ struct ContentView: View {
     @StateObject private var antivirus = AntivirusModel()
     @StateObject private var applications = ApplicationsModel()
     @Environment(\.openWindow) private var openWindow
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         VStack(spacing: 22) {
@@ -263,21 +395,17 @@ struct ContentView: View {
             pagePicker
             if updater.available != nil { updateBanner }
             Group {
-                if ui.page == .antivirus { AntivirusView(model: antivirus).transition(.opacity.combined(with: .move(edge: .trailing))) }
-                else if ui.page == .applications { ApplicationsView(m: applications).transition(.opacity) }
-                else if !m.hasScanned && !m.busy { welcome.transition(.opacity.combined(with: .scale(scale: 0.98))) }
-                else { review.transition(.opacity.combined(with: .move(edge: .bottom))) }
+                if ui.page == .antivirus { AntivirusView(model: antivirus).transition(reduceMotion ? .opacity : .opacity.combined(with: .move(edge: .trailing))) }
+                else if ui.page == .applications { ApplicationsView(m: applications).transition(reduceMotion ? .opacity : .opacity.combined(with: .scale(scale: 0.96))) }
+                else if !m.hasScanned && !m.busy { welcome.transition(reduceMotion ? .opacity : .opacity.combined(with: .scale(scale: 0.98))) }
+                else { review.transition(reduceMotion ? .opacity : .opacity.combined(with: .move(edge: .bottom))) }
             }
-            .animation(Brand.spring, value: ui.page)
-            .animation(Brand.spring, value: m.hasScanned || m.busy)
+            .animation(reduceMotion ? .easeOut(duration: 0.15) : Brand.spring, value: ui.page)
+            .animation(reduceMotion ? .easeOut(duration: 0.15) : Brand.spring, value: m.hasScanned || m.busy)
         }
         .padding(28)
         .frame(minWidth: 760, minHeight: 620)
-        .background {
-            ZStack {
-                Color(nsColor: .windowBackgroundColor)
-            }.ignoresSafeArea()
-        }
+        .background { AmbientBackdrop().ignoresSafeArea() }
         .tint(Brand.blue)
         .sheet(isPresented: $ui.showSettings) { settings }
         .sheet(isPresented: $ui.showSupport) { supportSheet }
@@ -321,13 +449,14 @@ struct ContentView: View {
     }
 
     private var pagePicker: some View {
-        Picker("", selection: $ui.page) {
-            Label(L("s256"), systemImage: "sparkles").tag(MacSpacePage.cleanup)
-            Label(L("s014"), systemImage: "square.grid.2x2").tag(MacSpacePage.applications)
-            Label(L("s255"), systemImage: "shield.lefthalf.filled").tag(MacSpacePage.antivirus)
+        HStack(spacing: 4) {
+            NavigationPill(title: L("s256"), symbol: "sparkles", selected: ui.page == .cleanup) { ui.page = .cleanup }
+            NavigationPill(title: L("s014"), symbol: "square.grid.2x2", selected: ui.page == .applications) { ui.page = .applications }
+            NavigationPill(title: L("s255"), symbol: "shield.lefthalf.filled", selected: ui.page == .antivirus) { ui.page = .antivirus }
         }
-        .pickerStyle(.segmented)
-        .frame(maxWidth: 480)
+        .padding(4)
+        .background(.regularMaterial, in: Capsule())
+        .overlay(Capsule().stroke(Color.primary.opacity(0.06)))
     }
 
     private var header: some View {
@@ -382,29 +511,46 @@ struct ContentView: View {
 
     private var welcome: some View {
         VStack(spacing: 0) {
-            Spacer(minLength: 20)
-            diskSummary
-            Spacer(minLength: 25)
-            Text(L("s124")).font(.system(size: 24, weight: .semibold, design: .rounded))
-            Text(L("s113")).font(.callout).foregroundStyle(.secondary).multilineTextAlignment(.center)
-                .padding(.top, 9)
-            Button { m.scan() } label: {
-                Label(L("s106"), systemImage: "sparkle.magnifyingglass")
-                    .frame(minWidth: 230).padding(.vertical, 4)
+            Spacer(minLength: 0)
+            HStack(spacing: 28) {
+                VStack(alignment: .leading, spacing: 0) {
+                    Label(L("s256"), systemImage: "sparkles")
+                        .font(.caption.weight(.semibold)).foregroundStyle(Brand.blue)
+                        .padding(.horizontal, 11).padding(.vertical, 7)
+                        .background(Brand.blue.opacity(0.09), in: Capsule())
+                    Text(L("s124"))
+                        .font(.system(size: 32, weight: .semibold, design: .rounded))
+                        .padding(.top, 24)
+                    Text(L("s113"))
+                        .font(.callout).foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .padding(.top, 10)
+                    Button { m.scan() } label: {
+                        Label(L("s106"), systemImage: "sparkle.magnifyingglass")
+                            .padding(.horizontal, 14).padding(.vertical, 5)
+                    }
+                    .buttonStyle(GraphiteButtonStyle()).controlSize(.large)
+                    .disabled(m.enabled.isEmpty)
+                    .keyboardShortcut("r", modifiers: .command)
+                    .padding(.top, 28)
+                    Button { ui.showSupport = true } label: {
+                        Label(L("s312"), systemImage: "heart.fill").font(.caption.weight(.medium))
+                    }
+                    .buttonStyle(.plain).foregroundStyle(.secondary)
+                    .padding(.top, 18)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                diskSummary.frame(width: 240)
             }
-            .buttonStyle(GraphiteButtonStyle()).controlSize(.large)
-            .disabled(m.enabled.isEmpty)
-            .keyboardShortcut("r", modifiers: .command)
-            .padding(.top, 28)
-            Spacer(minLength: 20)
-            Button { ui.showSupport = true } label: {
-                Label(L("s312"), systemImage: "heart.fill").font(.caption.weight(.medium))
-            }
-            .buttonStyle(.plain).foregroundStyle(.secondary)
-            .padding(.bottom, 16)
+            .padding(.horizontal, 46).padding(.vertical, 28)
+            .frame(maxWidth: .infinity)
+            .frame(height: 350)
+            .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 30, style: .continuous))
+            .overlay(RoundedRectangle(cornerRadius: 30, style: .continuous).stroke(Color.primary.opacity(0.07)))
+            .shadow(color: .black.opacity(0.055), radius: 22, y: 10)
+            Spacer(minLength: 0)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .glassPanel(radius: 24)
     }
 
     private var review: some View {
