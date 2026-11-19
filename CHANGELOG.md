@@ -1,5 +1,10 @@
 # Changelog
 
+## 3.0.6
+
+- Keep folders containing unfinished or recently modified downloads and preserve the selected cleanup schedule across runs.
+- Count antivirus read errors as skipped, honor immediate cancellation, and keep ordinary external drives with backup-like filenames in the scan.
+
 ## 3.0.5
 
 - Fix the installed app showing internal codes such as "s256" instead of text. Version 3.0.4 was packaged with files only the system could read, so MacSpace could not load its translations or its own version number. The build now makes every file readable and refuses to package unreadable files.

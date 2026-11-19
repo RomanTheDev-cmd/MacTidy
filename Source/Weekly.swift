@@ -45,15 +45,37 @@ struct WeeklyCleanup {
     // Leave items changed in the last few minutes; they may still be downloading.
     static let recentGrace: TimeInterval = 10 * 60
 
-    static func shouldSkip(_ item: URL, now: Date) -> Bool {
-        if preservedNames.contains(item.lastPathComponent) { return true }
+    private static let keys: Set<URLResourceKey> = [.isDirectoryKey, .isSymbolicLinkKey,
+                                                   .isUbiquitousItemKey, .contentModificationDateKey]
+
+    private static func isProtected(_ item: URL, values: URLResourceValues, now: Date) throws -> Bool {
         if partialDownloadExtensions.contains(item.pathExtension.lowercased()) { return true }
-        let values = try? URL(fileURLWithPath: item.path).resourceValues(forKeys: [.contentModificationDateKey])
-        if let modified = values?.contentModificationDate, now.timeIntervalSince(modified) < recentGrace { return true }
+        if values.isUbiquitousItem == true { throw CleanerError(message: L("s250")) }
+        guard let modified = values.contentModificationDate else { throw CleanerError(message: L("s075")) }
+        return now.timeIntervalSince(modified) < recentGrace
+    }
+
+    static func shouldSkip(_ item: URL, now: Date) throws -> Bool {
+        if preservedNames.contains(item.lastPathComponent) { return true }
+        let values = try URL(fileURLWithPath: item.path).resourceValues(forKeys: keys)
+        if try isProtected(item, values: values, now: now) { return true }
+        guard values.isDirectory == true, values.isSymbolicLink != true else { return false }
+
+        var traversalError: Error?
+        guard let children = FileManager.default.enumerator(at: item, includingPropertiesForKeys: Array(keys),
+                                                            options: [], errorHandler: { _, error in
+            traversalError = error
+            return false
+        }) else { throw CleanerError(message: L("s079")) }
+        for case let child as URL in children {
+            let metadata = try URL(fileURLWithPath: child.path).resourceValues(forKeys: keys)
+            if try isProtected(child, values: metadata, now: now) { return true }
+        }
+        if let traversalError { throw traversalError }
         return false
     }
 
-    // Direct children only: move directories intact and never traverse symlinks.
+    // Move only direct children, including directories whose contents passed the check.
     static func run(root requestedRoot: URL, now: Date = Date(), move: (URL) throws -> Void = {
         try FileManager.default.trashItem(at: $0, resultingItemURL: nil)
     }) -> WeeklyReport {
@@ -63,15 +85,13 @@ struct WeeklyCleanup {
             let root = Scanner.canonical(requestedRoot)
             try Scanner.validateRoot(root)
             let children = try FileManager.default.contentsOfDirectory(at: root, includingPropertiesForKeys: nil)
-            for item in children where !shouldSkip(item, now: now) {
+            for item in children {
                 do {
                     guard Scanner.canonical(requestedRoot).path == root.path,
                           item.deletingLastPathComponent().path == root.path else {
                         throw CleanerError(message: L("s144"))
                     }
-                    guard FileManager.default.isUbiquitousItem(at: item) == false else {
-                        throw CleanerError(message: L("s250"))
-                    }
+                    if try shouldSkip(item, now: now) { continue }
                     try move(item)
                     moved += 1
                 } catch { failures.append("\(item.lastPathComponent): \(error.localizedDescription)") }
@@ -121,7 +141,7 @@ struct WeeklySchedule {
         if fm.fileExists(atPath: installedHelper.path) { try fm.removeItem(at: installedHelper) }
         try fm.copyItem(at: helper, to: installedHelper)
         self.cadence = cadence
-        if let next = previousNextRun ?? cadence.nextOccurrence(after: Date()) {
+        if let next = scheduledDate(previous: previousNextRun, cadence: cadence) {
             try PropertyListEncoder().encode(CleanupNextRun(date: next)).write(to: nextRunURL, options: .atomic)
         }
         let plist = configuration(helper: installedHelper, cadence: cadence)
@@ -146,7 +166,7 @@ struct WeeklySchedule {
     static func configuration(helper: URL, cadence: CleanupCadence = WeeklySchedule.cadence) -> [String: Any] {
         return [
             "Label": label,
-            "ProgramArguments": [helper.appendingPathComponent("Contents/MacOS/MacTidyHelper").path],
+            "ProgramArguments": [helper.appendingPathComponent("Contents/MacOS/MacTidyHelper").path, cadence.rawValue],
             "StartCalendarInterval": cadence.calendarComponents,
             "RunAtLoad": true,
             "LimitLoadToSessionType": "Aqua",
@@ -155,7 +175,15 @@ struct WeeklySchedule {
             "StandardErrorPath": support.appendingPathComponent("weekly-error.log").path
         ]
     }
-    static func markNextOccurrence(from date: Date = Date()) throws {
+    static func scheduledDate(previous: Date?, cadence: CleanupCadence, now: Date = Date(),
+                              calendar: Calendar = .current) -> Date? {
+        if let previous,
+           cadence.nextOccurrence(after: min(now, previous.addingTimeInterval(-1)), calendar: calendar) == previous {
+            return previous
+        }
+        return cadence.nextOccurrence(after: now, calendar: calendar)
+    }
+    static func markNextOccurrence(cadence: CleanupCadence, from date: Date = Date()) throws {
         guard let next = cadence.nextOccurrence(after: date) else { return }
         try PropertyListEncoder().encode(CleanupNextRun(date: next)).write(to: nextRunURL, options: .atomic)
     }

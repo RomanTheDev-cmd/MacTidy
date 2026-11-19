@@ -4,7 +4,9 @@ import Foundation
     static func main() {
         // RunAtLoad makes a missed cleanup happen on the next login after shutdown.
         // Ignore ordinary login starts until the next scheduled occurrence is due.
-        guard WeeklySchedule.enabled else { return }
+        guard WeeklySchedule.enabled,
+              let argument = CommandLine.arguments.dropFirst().first,
+              let cadence = CleanupCadence(rawValue: argument) else { return }
         guard WeeklySchedule.isDue(nextRun: WeeklySchedule.nextRun) else { return }
         let downloads = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Downloads", isDirectory: true)
         let report = WeeklyCleanup.run(root: downloads)
@@ -13,7 +15,7 @@ import Foundation
             try JSONEncoder().encode(report).write(to: WeeklySchedule.reportURL, options: .atomic)
             // Advance after recording the result. If the process stops midway,
             // remaining entries are retried at the next helper launch.
-            try WeeklySchedule.markNextOccurrence()
+            try WeeklySchedule.markNextOccurrence(cadence: cadence)
         } catch { fputs(L("s150" , error.localizedDescription), stderr) }
         if !report.failures.isEmpty { exit(1) }
     }

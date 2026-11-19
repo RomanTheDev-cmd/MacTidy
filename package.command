@@ -1,13 +1,13 @@
 #!/bin/zsh
 set -euo pipefail
 cd "$(dirname "$0")"
-./build.command
 version=$(/usr/libexec/PlistBuddy -c 'Print CFBundleShortVersionString' Source/Info.plist)
 arch=$(uname -m)
-staging=$(mktemp -d)
+local_temp=$(/usr/bin/getconf DARWIN_USER_TEMP_DIR)
+staging=$(/usr/bin/mktemp -d "${local_temp%/}/MacSpace-package.XXXXXX")
 trap 'rm -rf "$staging"' EXIT
 mkdir -p "$staging/root/Applications" dist
-/usr/bin/ditto --noextattr --norsrc MacSpace.app "$staging/root/Applications/MacSpace.app"
+MACTIDY_BUILD_OUTPUT_DIR="$staging/root/Applications" ./build.command
 if [[ -n "$(/usr/bin/find "$staging/root" ! -perm -o=r -print)" ]]; then print -u2 "Package payload has unreadable files."; exit 1; fi
 mkdir -p "$staging/scripts"
 cat > "$staging/scripts/postinstall" <<'SH'

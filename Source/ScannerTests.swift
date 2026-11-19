@@ -30,11 +30,13 @@ final class DefinitionUpdateProbe: @unchecked Sendable {
         let definitions = ["main.cvd", "daily.cld", "bytecode.cvd"].map { URL(fileURLWithPath: "/tmp/" + $0) }
         check(AntivirusEngine.hasCompleteDefinitions(definitions), "complete official antivirus database is ready")
         check(!AntivirusEngine.hasCompleteDefinitions(Array(definitions.dropLast())), "partial antivirus database is not ready")
-        check(AntivirusScanLine.parse("/tmp/clean.txt: OK")?.signature == nil, "clean antivirus line advances progress")
+        check(AntivirusScanLine.parse("/tmp/clean.txt: OK")?.path == "/tmp/clean.txt", "clean antivirus line advances progress")
         check(AntivirusScanLine.parse("/tmp/name:part.txt: Test.Signature FOUND")?.path == "/tmp/name:part.txt" &&
               AntivirusScanLine.parse("/tmp/name:part.txt: Test.Signature FOUND")?.signature == "Test.Signature",
               "antivirus finding preserves paths containing colons")
         check(AntivirusScanLine.parse("LibClamAV warning") == nil, "antivirus warnings do not count as files")
+        check(AntivirusScanLine.parse("/tmp/locked.txt: Access denied ERROR") == nil,
+              "antivirus read errors do not count as scanned files")
         check(AntivirusScanLine.isSkippedLocation("/private/var/root: Can't open directory.") &&
               AntivirusScanLine.isSkippedLocation("/tmp/locked.txt: Access denied ERROR") &&
               !AntivirusScanLine.isSkippedLocation("/tmp/clean.txt: OK"), "inaccessible antivirus locations are counted as skipped")
@@ -44,7 +46,10 @@ final class DefinitionUpdateProbe: @unchecked Sendable {
         let driveRoot = FileManager.default.temporaryDirectory.appendingPathComponent("MacSpaceDrive-\(UUID().uuidString)")
         try? FileManager.default.createDirectory(at: driveRoot, withIntermediateDirectories: true)
         try? Data().write(to: driveRoot.appendingPathComponent("photo.jpg"))
-        check(!AntivirusEngine.isTimeMachineDrive(driveRoot), "ordinary flash drive is scanned")
+        for name in ["session.backup", "2026-10-11-120000.previous", "movie.inprogress"] {
+            try Data().write(to: driveRoot.appendingPathComponent(name))
+        }
+        check(!AntivirusEngine.isTimeMachineDrive(driveRoot), "ordinary backup-like files do not exclude a flash drive")
         try? FileManager.default.createDirectory(at: driveRoot.appendingPathComponent("2026-10-11-120000.backup"), withIntermediateDirectories: true)
         check(AntivirusEngine.isTimeMachineDrive(driveRoot), "Time Machine backup drive is not scanned")
         try? FileManager.default.removeItem(at: driveRoot)
@@ -137,6 +142,18 @@ final class DefinitionUpdateProbe: @unchecked Sendable {
         let root = Scanner.canonical(rawRoot)
         defer { try? fm.removeItem(at: root) }
         check(try CloudLocal.scan(root: root).isEmpty, "ordinary folders are not scanned as iCloud Drive")
+        let stoppedHistory = root.appendingPathComponent("isolated-scan-history.json")
+        let earlyStop = AntivirusModel(historyURL: stoppedHistory)
+        earlyStop.ready = true
+        earlyStop.scan()
+        earlyStop.stopScan()
+        let stopDeadline = Date().addingTimeInterval(3)
+        while earlyStop.scanning && Date() < stopDeadline {
+            try await Task.sleep(nanoseconds: 10_000_000)
+        }
+        let stoppedRecord = AntivirusEngine.loadHistory(from: stoppedHistory).first
+        check(!earlyStop.scanning && stoppedRecord?.outcome == .stopped && stoppedRecord?.scannedFiles == 0,
+              "immediate antivirus stop reaches the worker before the engine starts")
         let ordinaryCloudCandidate = CloudLocalFile(url: root.appendingPathComponent("local.bin"), bytes: 8192, stamp: "test")
         rejects("ordinary files cannot use the iCloud local-copy action") {
             try CloudLocal.evict(ordinaryCloudCandidate, root: root) { _ in }
@@ -274,6 +291,28 @@ final class DefinitionUpdateProbe: @unchecked Sendable {
         check(fm.fileExists(atPath: original.url.path), "weekly does not traverse symlink targets")
         let partial = WeeklyCleanup.run(root: weekly, now: later) { u in if u.lastPathComponent == "folder" { throw CleanerError(message: "Injected failure") } }
         check(partial.moved == 3 && partial.failures.count == 1, "weekly reports partial failures")
+        try write("weekly-nested/Partial/movie.crdownload", 10)
+        try write("weekly-nested/Recent/movie.mp4", 10)
+        try write("weekly-nested/Complete/movie.mp4", 10)
+        let nested = root.appendingPathComponent("weekly-nested")
+        let oldNested = Date().addingTimeInterval(-3600)
+        for path in ["Partial", "Partial/movie.crdownload", "Recent", "Complete", "Complete/movie.mp4"] {
+            try fm.setAttributes([.modificationDate: oldNested], ofItemAtPath: nested.appendingPathComponent(path).path)
+        }
+        var nestedMoves: [String] = []
+        _ = WeeklyCleanup.run(root: nested) { nestedMoves.append($0.lastPathComponent) }
+        check(nestedMoves == ["Complete"], "weekly keeps folders containing recent files or unfinished downloads")
+        try write("weekly-restricted/Folder/child.txt", 10)
+        let restrictedRoot = root.appendingPathComponent("weekly-restricted")
+        let restrictedFolder = restrictedRoot.appendingPathComponent("Folder")
+        try fm.setAttributes([.modificationDate: oldNested, .posixPermissions: 0o000], ofItemAtPath: restrictedFolder.path)
+        do {
+            defer { try? fm.setAttributes([.posixPermissions: 0o700], ofItemAtPath: restrictedFolder.path) }
+            if !fm.isReadableFile(atPath: restrictedFolder.path) {
+                let restricted = WeeklyCleanup.run(root: restrictedRoot) { _ in preconditionFailure("Must not move") }
+                check(restricted.moved == 0 && restricted.failures.count == 1, "unreadable contents protect the folder")
+            }
+        }
         let missing = WeeklyCleanup.run(root: root.appendingPathComponent("missing")) { _ in preconditionFailure("Must not move") }
         check(missing.moved == 0 && missing.failures.count == 1, "weekly reports inaccessible root")
         let gate = DispatchSemaphore(value: 0)
@@ -295,6 +334,28 @@ final class DefinitionUpdateProbe: @unchecked Sendable {
         let helperURL = root.appendingPathComponent("Helper With Spaces.app")
         let dailyConfig = WeeklySchedule.configuration(helper: helperURL, cadence: .daily)
         let monthlyConfig = WeeklySchedule.configuration(helper: helperURL, cadence: .monthly)
+        var cleanupCalendar = Calendar(identifier: .gregorian)
+        cleanupCalendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        let dates = ISO8601DateFormatter()
+        let start = dates.date(from: "2026-11-19T12:00:00Z")!
+        let schedules: [(CleanupCadence, String, String)] = [
+            (.daily, "2026-11-20T12:00:00Z", "2026-11-21T12:00:00Z"),
+            (.weekly, "2026-11-22T12:00:00Z", "2026-11-29T12:00:00Z"),
+            (.monthly, "2026-12-01T12:00:00Z", "2027-01-01T12:00:00Z")
+        ]
+        for (cadence, first, second) in schedules {
+            let next = cadence.nextOccurrence(after: start, calendar: cleanupCalendar)!
+            check(next == dates.date(from: first) && cadence.nextOccurrence(after: next, calendar: cleanupCalendar) == dates.date(from: second),
+                  "cleanup stays on schedule across consecutive \(cadence.rawValue) runs")
+        }
+        let legacyWeekly = dates.date(from: "2026-11-22T12:00:00Z")!
+        check(WeeklySchedule.scheduledDate(previous: legacyWeekly, cadence: .daily, now: start, calendar: cleanupCalendar) == dates.date(from: "2026-11-20T12:00:00Z") &&
+              WeeklySchedule.scheduledDate(previous: legacyWeekly, cadence: .monthly, now: start, calendar: cleanupCalendar) == dates.date(from: "2026-12-01T12:00:00Z"),
+              "upgrade replaces an incorrect legacy next date")
+        let missedSunday = dates.date(from: "2026-11-15T12:00:00Z")!
+        check(WeeklySchedule.scheduledDate(previous: missedSunday, cadence: .weekly, now: start, calendar: cleanupCalendar) == missedSunday &&
+              WeeklySchedule.scheduledDate(previous: legacyWeekly, cadence: .weekly, now: start, calendar: cleanupCalendar) == legacyWeekly,
+              "upgrade preserves a valid pending occurrence")
         check(dailyConfig["StartCalendarInterval"] as? [String: Int] == ["Hour": 12, "Minute": 0], "daily launch calendar")
         check(monthlyConfig["StartCalendarInterval"] as? [String: Int] == ["Day": 1, "Hour": 12, "Minute": 0], "monthly launch calendar")
         let dueTime = Date()
@@ -304,7 +365,10 @@ final class DefinitionUpdateProbe: @unchecked Sendable {
         check(WeeklySchedule.isDue(nextRun: dueTime.addingTimeInterval(-1), now: dueTime), "missed run is due after next login")
         check(!WeeklySchedule.isDue(nextRun: dueTime.addingTimeInterval(1), now: dueTime) && !WeeklySchedule.isDue(nextRun: nil, now: dueTime), "new schedule does not clean up immediately")
         let args = weeklyConfig["ProgramArguments"] as? [String]
-        check(args?.count == 1 && args![0].contains("Helper With Spaces.app"), "helper path with spaces remains a single argument")
+        check(args == [helperURL.appendingPathComponent("Contents/MacOS/MacTidyHelper").path, "weekly"] &&
+              (dailyConfig["ProgramArguments"] as? [String])?.last == "daily" &&
+              (monthlyConfig["ProgramArguments"] as? [String])?.last == "monthly",
+              "launchd passes each cadence to the helper and keeps its path as a single argument")
         let now = Date()
         let old = now.addingTimeInterval(-40 * 86400)
         check(Audit.matches(.installers, url: URL(fileURLWithPath: "/a/Install.DMG"), modified: nil, created: nil, added: nil, now: now), "installer extensions are case insensitive")

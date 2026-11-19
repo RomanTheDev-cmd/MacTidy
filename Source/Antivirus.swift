@@ -69,7 +69,7 @@ enum AntivirusScanLine {
         let path = String(line[..<separator.lowerBound])
         let result = String(line[separator.upperBound...])
         guard path.hasPrefix("/") else { return nil }
-        if result == "OK" || result.hasSuffix(" ERROR") { return (path, nil) }
+        if result == "OK" { return (path, nil) }
         if result.hasSuffix(" FOUND") { return (path, String(result.dropLast(" FOUND".count))) }
         return nil
     }
@@ -133,17 +133,18 @@ enum AntivirusEngine {
     static var updater: URL { engine.appendingPathComponent("bin/freshclam") }
     static var historyURL: URL { support.appendingPathComponent("scan-history.json") }
 
-    static func loadHistory() -> [AntivirusScanRecord] {
-        guard let data = try? Data(contentsOf: historyURL),
+    static func loadHistory(from url: URL) -> [AntivirusScanRecord] {
+        guard let data = try? Data(contentsOf: url),
               let records = try? JSONDecoder().decode([AntivirusScanRecord].self, from: data) else { return [] }
         return Array(records.prefix(20))
     }
 
-    static func saveHistory(_ records: [AntivirusScanRecord]) throws {
-        try FileManager.default.createDirectory(at: support, withIntermediateDirectories: true)
-        try JSONEncoder().encode(Array(records.prefix(20))).write(to: historyURL, options: .atomic)
+    static func saveHistory(_ records: [AntivirusScanRecord], to url: URL) throws {
+        try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+        try JSONEncoder().encode(Array(records.prefix(20))).write(to: url, options: .atomic)
     }
 
+    // The app delegate uses this to stop the child process when MacSpace quits.
     static func cancelActiveScan() {
         scanLock.lock(); let scan = activeScan; scanLock.unlock()
         scan?.stop()
@@ -173,15 +174,18 @@ enum AntivirusEngine {
         return ["main", "daily", "bytecode"].allSatisfy { present.contains($0) }
     }
 
-    static func scanComputer(onProgress: @escaping (AntivirusScanProgress) -> Void,
+    static func scanComputer(control: AntivirusScanControl,
+                             onProgress: @escaping (AntivirusScanProgress) -> Void,
                              onFinding: @escaping (AntivirusFinding) -> Void) throws -> AntivirusScanResult {
-        guard FileManager.default.isExecutableFile(atPath: scanner.path) else { throw AntivirusError.engineMissing }
-        guard hasDefinitions else { throw AntivirusError.definitionsMissing }
-        let control = AntivirusScanControl()
         scanLock.lock(); activeScan = control; scanLock.unlock()
         defer {
             scanLock.lock(); if activeScan === control { activeScan = nil }; scanLock.unlock()
         }
+        if control.isStopped {
+            return AntivirusScanResult(findings: [], completed: false, cancelled: true, scannedFiles: 0, estimatedFiles: 0)
+        }
+        guard FileManager.default.isExecutableFile(atPath: scanner.path) else { throw AntivirusError.engineMissing }
+        guard hasDefinitions else { throw AntivirusError.definitionsMissing }
         let targets = scanTargets
         let estimatedFiles = countScannableFiles(targets: targets, control: control, onProgress: onProgress)
         if control.isStopped {
@@ -304,8 +308,16 @@ enum AntivirusEngine {
     }
 
     static func isTimeMachineDrive(_ url: URL, fileManager: FileManager = .default) -> Bool {
-        let names = (try? fileManager.contentsOfDirectory(atPath: url.path)) ?? []
-        return names.contains { $0 == "Backups.backupdb" || $0.hasSuffix(".backup") || $0.hasSuffix(".previous") || $0.hasSuffix(".inprogress") }
+        let keys: Set<URLResourceKey> = [.isDirectoryKey, .isSymbolicLinkKey]
+        let items = (try? fileManager.contentsOfDirectory(at: url, includingPropertiesForKeys: Array(keys))) ?? []
+        return items.contains { item in
+            let name = item.lastPathComponent
+            guard name == "Backups.backupdb" ||
+                    name.range(of: #"^\d{4}-\d{2}-\d{2}-\d{6}\.(backup|previous|inprogress)$"#,
+                               options: .regularExpression) != nil else { return false }
+            guard let metadata = try? item.resourceValues(forKeys: keys) else { return false }
+            return metadata.isDirectory == true && metadata.isSymbolicLink != true
+        }
     }
 
     static func moveToTrash(_ finding: AntivirusFinding) throws {
@@ -379,7 +391,7 @@ enum AntivirusEngine {
     @Published var status = L("s257")
     @Published var lastUpdated: Date?
     @Published var findings: [AntivirusFinding] = []
-    @Published var history = AntivirusEngine.loadHistory()
+    @Published var history: [AntivirusScanRecord]
     @Published var historyExpanded = false
     @Published var scanPhase: AntivirusScanProgress.Phase = .counting
     @Published var countedFiles = 0
@@ -391,12 +403,17 @@ enum AntivirusEngine {
     @Published var pendingRemoval: AntivirusFinding?
     @Published var error: String?
     private let definitionUpdater: () throws -> String
+    private let historyURL: URL
+    private var scanControl: AntivirusScanControl?
     private var scanID: UUID?
     private var scanBeganAt: Date?
     private var elapsedTask: Task<Void, Never>?
 
-    init(definitionUpdater: @escaping () throws -> String = AntivirusEngine.updateDefinitions) {
+    init(definitionUpdater: @escaping () throws -> String = AntivirusEngine.updateDefinitions,
+         historyURL: URL = AntivirusEngine.historyURL) {
         self.definitionUpdater = definitionUpdater
+        self.historyURL = historyURL
+        history = AntivirusEngine.loadHistory(from: historyURL)
         ready = FileManager.default.isExecutableFile(atPath: AntivirusEngine.scanner.path) && AntivirusEngine.hasDefinitions
         if let files = try? FileManager.default.contentsOfDirectory(at: AntivirusEngine.database, includingPropertiesForKeys: [.contentModificationDateKey]),
            let date = files.compactMap({ try? $0.resourceValues(forKeys: [.contentModificationDateKey]).contentModificationDate }).max() {
@@ -454,6 +471,8 @@ enum AntivirusEngine {
         guard ready, !updating, !scanning else { return }
         let id = UUID()
         let startedAt = Date()
+        let control = AntivirusScanControl()
+        scanControl = control
         scanID = id
         scanning = true
         stopping = false
@@ -481,7 +500,7 @@ enum AntivirusEngine {
         Task { [self] in
             do {
                 let result = try await Task.detached(priority: .userInitiated) { [weak self] in
-                    try AntivirusEngine.scanComputer(onProgress: { progress in
+                    try AntivirusEngine.scanComputer(control: control, onProgress: { progress in
                         Task { @MainActor [weak self] in
                             guard let self, self.scanID == id else { return }
                             if progress.phase == .scanning && self.scanBeganAt == nil {
@@ -504,17 +523,19 @@ enum AntivirusEngine {
                 scannedFiles = result.scannedFiles
                 estimatedFiles = result.estimatedFiles
                 let outcome: AntivirusScanRecord.Outcome
-                if result.cancelled {
+                if result.cancelled || control.isStopped {
                     outcome = .stopped
                     status = L("s300")
                 } else if result.completed {
                     outcome = .finished
                     status = result.findings.isEmpty ? L("s262") : L("s263", result.findings.count)
-                    if result.skippedLocations > 0 { status += " " + L("s311", result.skippedLocations) }
                 } else {
                     outcome = .partial
                     error = L("s270")
                     status = L("s264")
+                }
+                if outcome != .stopped, result.skippedLocations > 0 {
+                    status += " " + L("s311", result.skippedLocations)
                 }
                 saveRecord(startedAt: startedAt, scanned: result.scannedFiles, findings: result.findings, outcome: outcome)
             } catch {
@@ -528,6 +549,7 @@ enum AntivirusEngine {
             if let scanBeganAt { scanElapsedSeconds = Date().timeIntervalSince(scanBeganAt) }
             scanBeganAt = nil
             scanID = nil
+            scanControl = nil
             stopping = false
             scanning = false
         }
@@ -537,7 +559,7 @@ enum AntivirusEngine {
         guard scanning, !stopping else { return }
         stopping = true
         status = L("s299")
-        AntivirusEngine.cancelActiveScan()
+        scanControl?.stop()
     }
 
     private func saveRecord(startedAt: Date, scanned: Int, findings: [AntivirusFinding],
@@ -547,7 +569,7 @@ enum AntivirusEngine {
                                          findings: findings.map { AntivirusHistoryFinding(path: $0.path, signature: $0.signature) })
         history.insert(record, at: 0)
         if history.count > 20 { history = Array(history.prefix(20)) }
-        do { try AntivirusEngine.saveHistory(history) }
+        do { try AntivirusEngine.saveHistory(history, to: historyURL) }
         catch { self.error = L("s308") }
     }
 

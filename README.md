@@ -6,7 +6,7 @@ A native macOS app for finding large files, reviewing clutter, and moving select
 
 ## Install
 
-1. Download **MacSpace-3.0.5-arm64.pkg** from [Releases](https://github.com/RomanTheDev-cmd/MacTidy/releases/latest).
+1. Download **MacSpace-3.0.6-arm64.pkg** from [Releases](https://github.com/RomanTheDev-cmd/MacTidy/releases/latest).
 2. Double-click the installer and follow the standard macOS installation steps.
 3. Open **MacSpace** in **Applications**.
 
@@ -41,7 +41,7 @@ After installation, macOS may ask for approval again when opening a future updat
 - The **Applications** tab, next to Cleanup and Antivirus in the main window, follows the same flow: scan first, then review apps unused for 30, 90, or 180 days using Spotlight history. Missing history is separate; running applications and MacSpace itself are protected. Apps in restricted folders remain selectable; macOS asks for administrator authorization when it is needed to move the selected apps to Trash. Only the app bundle is moved; documents and settings remain.
 - The Storage by Type window estimates space used by photos, videos, audio, documents, installers, archives, apps, and other files. Select any personal-file category, including Other Files, to review individual files and move only selected items to Trash. System and protected folders remain excluded. The Applications category suggests up to three apps not opened for 90 days and opens the dedicated app review. Available space includes an estimate of space macOS can reclaim automatically, matching System Settings; local snapshots and APFS sharing can make the immediate physical free space smaller.
 - **Free up space** accepts a target in GB and presents alternatives: installers and archives, old downloads, large personal files, or a combined selection. It also links to rarely used apps for separate review. Review each suggested file, change the selection, and confirm before anything moves to Trash. Estimates may fall short of the target.
-- Optionally moves **everything in Downloads, including hidden files and whole folders**, to Trash daily, weekly, or monthly at 12:00 local time. Finder's `.localized` and `.DS_Store` files stay, so the folder keeps its localized name; unfinished downloads (`.crdownload`, `.download`, `.part`, `.partial`, `.opdownload`) and items changed in the last 10 minutes are left for the next run. If the Mac is off at the scheduled time, the helper checks for a missed run at the next login. This requires explicit opt-in. Trash is never emptied.
+- Optionally moves **everything in Downloads, including hidden files and whole folders**, to Trash daily, weekly, or monthly at 12:00 local time. Finder's `.localized` and `.DS_Store` files stay, so the folder keeps its localized name; unfinished downloads (`.crdownload`, `.download`, `.part`, `.partial`, `.opdownload`) and items changed in the last 10 minutes are left for the next run, along with any folder containing them. If the Mac is off at the scheduled time, the helper checks for a missed run at the next login. This requires explicit opt-in. Trash is never emptied.
 - The main window has an **Antivirus** tab with the ClamAV engine included in the app. MacSpace checks the official virus definitions when it opens and every two hours while it remains open. If a check fails, it retries automatically after 3, 10, 30, and 60 seconds, then every five minutes; an existing database remains available. The first download requires internet and stores the databases separately under Application Support; later checks use FreshClam's incremental updates when available. A full-disk scan starts only when you press **Search for viruses**. It first counts accessible files, then shows checked files, elapsed time, an approximate remaining time, findings as they appear, and a Stop button. The last 20 scan summaries and findings remain in local history. Full Disk Access is needed to scan protected personal locations. iCloud folders are excluded. A file moves to Trash only after you choose **Move to Trash** and confirm. MacSpace never empties Trash or uploads files.
 - Uses native glass on macOS 26+, standard materials on earlier versions, and the system appearance. The silver tile and blue brush icon has a transparent outer canvas.
 
@@ -87,7 +87,7 @@ cd MacTidy
 ./package.command
 ```
 
-`build.command` produces `MacSpace.app` for the current Mac's architecture. `package.command` builds a standalone `.pkg` in `dist/` and its SHA-256 checksum. Published releases are Apple Silicon; Intel builds have not been verified.
+`build.command` builds and signs the app in macOS's local temporary directory, then places `MacSpace.app` beside the source. For iCloud checkouts, that path links to the signed bundle in the local MacSpace cache. `test.command` type-checks the production app and helper before running the tests. `package.command` builds a standalone `.pkg` in `dist/` and its SHA-256 checksum. Published releases are Apple Silicon; Intel builds have not been verified.
 
 Tests cover scanning, cancellation, symlinks, changed metadata, storage categories, selected-category cleanup, recursive cache changes, deduplication, exclusions, application-removal guards, scheduling, and localization catalogs. The real Trash test only moves and restores a generated temporary fixture.
 
